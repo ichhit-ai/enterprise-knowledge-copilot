@@ -47,6 +47,17 @@ The LLM is an orchestrated state machine equipped with 6 specialized tools:
 
 ---
 
+<img width="1222" height="769" alt="Screenshot From 2026-05-08 15-03-11" src="https://github.com/user-attachments/assets/f6db6d84-881c-4ed6-bf59-4bf15b9e415d" />
+
+
+<img width="1251" height="927" alt="Screenshot From 2026-05-08 15-02-54" src="https://github.com/user-attachments/assets/3235d19f-1882-4e3f-9609-e796744ae2f8" />
+
+<img width="954" height="947" alt="Screenshot From 2026-05-08 15-02-31" src="https://github.com/user-attachments/assets/0243712c-0a25-4a9e-a3a1-4bb241ce291a" />
+
+<img width="954" height="947" alt="Screenshot From 2026-05-08 15-02-14" src="https://github.com/user-attachments/assets/c7e26e9d-96b7-4e73-8690-edc3b8a15429" />
+
+
+
 ## 💻 Installation & Setup
 
 Because this system runs a local LLM, you need to run two separate processes: the Ollama server, and the Python app.
