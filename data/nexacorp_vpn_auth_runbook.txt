@@ -1,0 +1,347 @@
+================================================================================
+NEXACORP VPN & AUTHENTICATION TROUBLESHOOTING RUNBOOK
+Version 2.1 | Last Updated: November 15, 2024 | Author: Marcus Thompson & Jordan Okafor
+Approved by: Sarah Jenkins (VP Infrastructure) | Classification: Tier 2 — Internal
+================================================================================
+
+PURPOSE
+-------
+This runbook provides step-by-step troubleshooting procedures for the most common
+VPN and authentication issues encountered by NexaCorp employees. It is intended
+for both end-users performing self-service diagnosis and Help Desk staff (Tomas
+Brewer's team) handling Tier 1 support calls. For issues not resolved by this
+runbook, escalate via TICKETSYS using the appropriate error code and priority.
+
+================================================================================
+RUNBOOK 1: ERR-AUTH-9092 — Expired or Revoked MFA Token
+================================================================================
+
+SYMPTOMS:
+- Login page shows "Authentication Failed — Token Expired" after entering MFA code
+- YubiKey blinks but AUTH-GATEWAY rejects the one-time password
+- Duo Mobile push notification sent but AUTH-GATEWAY returns 401 Unauthorized
+
+ROOT CAUSE:
+MFA tokens in HashiCorp Vault have a maximum TTL of 90 days. After 90 days, the
+token must be re-enrolled. This also occurs after Vault token rotation events
+(scheduled quarterly by Marcus Thompson) or YubiKey firmware updates.
+
+RESOLUTION STEPS:
+Step 1: Verify the error code. Open browser developer tools (F12 > Network tab)
+        and confirm the AUTH-GATEWAY response includes "ERR-AUTH-9092" in the
+        JSON body. If you see a different error code, stop and use the
+        appropriate runbook section.
+
+Step 2: Check if this is a mass outage. Visit the NexaCorp Status Page at
+        https://status.internal.nexacorp.com or ask a colleague to check.
+        If multiple users are affected, this is likely a Vault rotation event
+        and Marcus Thompson is already aware. Wait 30 minutes.
+
+Step 3: If individual issue, submit a TICKETSYS ticket:
+        - Category: Authentication
+        - Priority: P3 (P2 if you are a System Owner or executive)
+        - Assign to: Marcus Thompson
+        - Include: Your employee ID, MFA device type (YubiKey serial or Duo
+          device ID), and the exact timestamp of the failed login attempt.
+
+Step 4: Marcus Thompson or Tomas Brewer will re-provision your MFA token in
+        Vault. You will receive an enrollment email to your personal email
+        (not NexaCorp email, since you can't access it). Follow the enrollment
+        link within 24 hours.
+
+Step 5: After re-enrollment, test login to AUTH-GATEWAY. If successful, reply
+        to the TICKETSYS ticket confirming resolution.
+
+ESCALATION: If Marcus Thompson is unavailable within 15 minutes on a P1 (mass
+outage affecting >40 users), escalate to Sarah Jenkins at +1-312-555-0188.
+
+================================================================================
+RUNBOOK 2: ERR-AUTH-8801 — AUTH-GATEWAY Certificate Mismatch
+================================================================================
+
+SYMPTOMS:
+- Browser shows "SSL Certificate Error" or "NET::ERR_CERT_AUTHORITY_INVALID"
+  when accessing any NexaCorp internal application
+- Service accounts in BUILDPIPE-CI fail with "certificate verify failed"
+- APIGATEWAY-V2 returns HTTP 502 with "upstream SSL handshake failed"
+
+ROOT CAUSE:
+The AUTH-GATEWAY TLS certificate has been rotated, replaced, or corrupted.
+This typically occurs after:
+- Scheduled certificate renewal (quarterly)
+- Emergency certificate rotation after a security incident
+- Failed deployment of a new certificate bundle by Kevin Marsh or Marcus Thompson
+- NTP clock drift causing certificate validity window check to fail
+
+RESOLUTION STEPS:
+Step 1: Do NOT bypass the certificate warning in your browser. This could
+        indicate a man-in-the-middle attack.
+
+Step 2: Contact Marcus Thompson immediately via Slack (#auth-gateway-ops) or
+        phone. This is a P2 incident by default.
+
+Step 3: If you are Marcus Thompson or Kevin Marsh performing the fix:
+   a) SSH into auth-gw-01 and auth-gw-02 (both nodes)
+   b) Check certificate expiry: openssl x509 -in /etc/ssl/authgw/cert.pem -noout -dates
+   c) Compare certificate fingerprint against the expected value in Vault:
+      vault kv get secret/authgw/cert-fingerprint
+   d) If mismatch, restore from last known good:
+      cp /etc/ssl/authgw/cert.pem.bak /etc/ssl/authgw/cert.pem
+      systemctl restart nginx
+   e) If NTP drift, verify: chronyc tracking
+      If offset > 1 second: chronyc makestep && systemctl restart auth-gateway
+
+Step 4: After fix, verify from a client machine:
+        curl -v https://auth.internal.nexacorp.com/health
+        Expected response: {"status": "healthy", "cert_valid_until": "..."}
+
+Step 5: Update the TICKETSYS ticket with root cause and resolution.
+
+ESCALATION: All ERR-AUTH-8801 events are auto-reported to Sarah Jenkins via
+PagerDuty. No manual escalation needed unless resolution exceeds 2 hours.
+
+================================================================================
+RUNBOOK 3: ERR-AUTH-0041 — LDAP Directory Sync Failure
+================================================================================
+
+SYMPTOMS:
+- Newly onboarded employees (from Lena Kovacs's HR workflow) cannot log in
+- Existing employees see "Account Not Found" despite having valid credentials
+- HRPORTAL shows the employee record but AUTH-GATEWAY denies access
+
+ROOT CAUSE:
+The AUTH-GATEWAY LDAP connector has lost synchronization with Active Directory.
+This can happen after:
+- AD schema extensions (deployed by Kevin Marsh)
+- Network connectivity issues between AUTH-GATEWAY and the AD domain controller
+- LDAP bind account password expiry (rotated every 90 days)
+
+RESOLUTION STEPS:
+Step 1: Check LDAP sync status on AUTH-GATEWAY:
+        curl https://auth.internal.nexacorp.com/admin/ldap-status
+        Look for "last_sync_timestamp" — if it's more than 30 minutes old,
+        sync is broken.
+
+Step 2: Check LDAP bind account in Vault:
+        vault kv get secret/authgw/ldap-bind
+        Verify the password hasn't expired in AD.
+
+Step 3: Force a manual sync:
+        curl -X POST https://auth.internal.nexacorp.com/admin/ldap-sync \
+          -H "Authorization: Bearer $(vault token)" \
+          -d '{"full_sync": true}'
+
+Step 4: Wait 5 minutes. Check if the affected user can now authenticate.
+
+Step 5: If the issue persists, check AD domain controller health:
+        - Ping dc01.nexacorp.internal and dc02.nexacorp.internal
+        - Check replication: repadmin /replsummary
+        - Verify LDAP port 636 is accessible from auth-gw nodes
+
+Step 6: Update TICKETSYS and notify Lena Kovacs if onboarding is delayed.
+
+ESCALATION: P3 for single users, P2 for batch onboarding failures (>5 users).
+
+================================================================================
+RUNBOOK 4: VPN-CERT-7731 — VPN Client Certificate Expired
+================================================================================
+
+SYMPTOMS:
+- NEXAVPN client (Cisco AnyConnect) shows "Certificate Validation Failure"
+- Connection attempt fails immediately without reaching the authentication prompt
+- Error appears after MDM certificate push or bulk certificate renewal
+
+ROOT CAUSE:
+The client-side VPN certificate has expired or was not properly renewed during
+the last bulk renewal cycle managed by Jordan Okafor.
+
+RESOLUTION STEPS:
+Step 1: Open the NEXAVPN client. Go to Settings > Certificate.
+        Check the "Valid Until" date. If it's in the past, your cert is expired.
+
+Step 2: Try the self-service renewal:
+   a) Open https://vpn-cert.internal.nexacorp.com (accessible without VPN)
+   b) Log in with your NexaCorp AD credentials
+   c) Click "Request New Certificate"
+   d) Download and install the new certificate (.p12 file)
+   e) Restart the NEXAVPN client
+
+Step 3: If self-service is unavailable or fails:
+   - Submit a TICKETSYS P3 ticket tagged "VPN-CERT"
+   - Assign to: Jordan Okafor
+   - Include: Your device type (Windows/Mac/iOS/Android), OS version, and
+     NEXAVPN client version (found in Help > About)
+   - Certificate re-issuance typically takes 30 minutes during business hours
+
+Step 4: For iOS devices specifically:
+   - If the MDM certificate push failed, go to Settings > General > VPN & Device
+     Management and remove the expired profile
+   - Jordan Okafor will push a new profile via MDM within 1 hour
+
+Step 5: After receiving the new certificate, test VPN connection.
+        Run: ping nexacore-db.internal.nexacorp.com
+        If successful, reply to TICKETSYS confirming resolution.
+
+ESCALATION: P2 if affecting an entire branch office (>10 users).
+Contact Jordan Okafor at j.okafor@nexacorp.com.
+
+================================================================================
+RUNBOOK 5: VPN-HANDSHAKE-003 — TLS Handshake Failure
+================================================================================
+
+SYMPTOMS:
+- NEXAVPN client connects but drops during "Establishing Secure Session" phase
+- Error log shows "TLS handshake failed" or "SSL_ERROR_HANDSHAKE_FAILURE"
+- Particularly common after OS updates (macOS Sonoma, Windows 11 23H2)
+
+ROOT CAUSE:
+TLS version incompatibility between the NEXAVPN client and the VPN concentrator.
+NexaCorp's security policy (enforced by NEXASEC-FW) requires TLS 1.2 minimum.
+Older VPN client versions (below 3.4.1) may attempt TLS 1.1, which is now dropped.
+
+RESOLUTION STEPS:
+Step 1: Check your NEXAVPN client version:
+        Open AnyConnect > Help > About
+        If version is below 3.4.1, you must upgrade.
+
+Step 2: Download the latest client from HRPORTAL > IT Downloads > VPN Client
+        (this page is accessible without VPN via https://downloads.nexacorp.com)
+
+Step 3: Uninstall the old client completely:
+   Windows: Control Panel > Programs > Uninstall Cisco AnyConnect
+   macOS: /opt/cisco/anyconnect/bin/anyconnect_uninstall.sh
+   
+Step 4: Install the new client. Do NOT import old configuration profiles.
+        The new client will auto-download the correct profile from the VPN
+        concentrator on first connection.
+
+Step 5: If the issue persists on the latest client:
+   a) Clear the TLS session cache:
+      Windows: certutil -URLcache * delete
+      macOS: security delete-certificate -Z <fingerprint>
+   b) Check system clock (TLS is sensitive to clock skew):
+      Ensure your system time is within 30 seconds of NTP
+
+Step 6: If still failing, this may be a concentrator-side issue.
+        Submit TICKETSYS P2 ticket to Jordan Okafor with:
+        - Full client log (AnyConnect > Diagnostics > Export)
+        - OS version and patch level
+        - Network type (corporate, home, public WiFi)
+
+ESCALATION: Jordan Okafor (primary), Marcus Thompson (secondary for auth-related
+handshake failures).
+
+================================================================================
+RUNBOOK 6: VPN-DNS-1882 — DNS Resolution Failure Over VPN
+================================================================================
+
+SYMPTOMS:
+- Connected to NEXAVPN but internal hostnames don't resolve
+- Can ping internal IPs (e.g., 10.0.1.50) but not hostnames (nexacore-db.internal)
+- Affects *.nexacorp.internal domain only; public DNS works fine
+- Common after BGP route updates or split-tunnel configuration changes
+
+RESOLUTION STEPS:
+Step 1: Verify VPN is connected and you have an internal IP:
+        ipconfig /all (Windows) or ifconfig utun0 (macOS)
+        You should see an IP in the 10.x.x.x range.
+
+Step 2: Test DNS resolution:
+        nslookup nexacore-db.internal.nexacorp.com
+        If it fails, try specifying the internal DNS server directly:
+        nslookup nexacore-db.internal.nexacorp.com 10.0.0.53
+
+Step 3: If direct DNS works but default resolution doesn't:
+   - Your DNS split-tunnel configuration is incorrect
+   - On macOS: scutil --dns | grep nexacorp
+   - On Windows: Get-DnsClientNrptRule | Where {$_.Namespace -match "nexacorp"}
+
+Step 4: Fix split-tunnel DNS:
+   - Disconnect and reconnect VPN (this forces a fresh DNS config push)
+   - If still broken, flush DNS cache:
+     Windows: ipconfig /flushdns
+     macOS: sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+
+Step 5: If none of the above works, check if you're using a third-party DNS
+        resolver (Cloudflare 1.1.1.1 or Google 8.8.8.8) that overrides the
+        VPN DNS settings. Temporarily disable it.
+
+Step 6: Submit TICKETSYS P3 ticket if unresolved after 15 minutes.
+
+ESCALATION: Jordan Okafor (primary). P2 if affecting an entire office site.
+
+================================================================================
+RUNBOOK 7: COMMON EMPLOYEE SELF-SERVICE TROUBLESHOOTING
+================================================================================
+
+ISSUE: "I forgot my password"
+→ Go to https://auth.nexacorp.com/reset (no VPN needed)
+→ Enter your employee email
+→ Complete MFA verification
+→ Set a new password (min 16 chars, 1 upper, 1 lower, 1 digit, 1 special)
+→ If MFA is also broken, see Runbook 1 (ERR-AUTH-9092)
+
+ISSUE: "I can't access HRPORTAL"
+→ Check if you're on VPN (HRPORTAL is in ZONE-CORP, requires VPN)
+→ Clear browser cookies for *.nexacorp.com
+→ Try an incognito/private browsing window
+→ If session keeps timing out after 2 minutes, this is HR-SESSION-992
+→ Submit TICKETSYS ticket to Tomas Brewer
+
+ISSUE: "My email isn't sending/receiving"
+→ Check NexaCorp Status Page for NEXAMAIL outages
+→ If sending fails with "rejected by recipient," this may be MAIL-RELAY-550X
+→ Contact Marcus Thompson or submit TICKETSYS ticket
+→ For delayed emails, check if MAIL-QUEUE-8823 is active (queue depth issue)
+
+ISSUE: "I need software installed"
+→ You cannot install software directly (policy Section 12.2)
+→ Submit a TICKETSYS request under "Software Request"
+→ Kevin Marsh will review and approve from the Approved Software Catalog
+→ Approved software is pushed via the Endpoint Management system
+
+ISSUE: "I need access to a database/system"
+→ Submit a TICKETSYS "Access Request" ticket
+→ Requires approval from both the System Owner AND Priya Nair
+→ For NEXACORE-DB: Derek Walsh approves role assignment
+→ For AWS resources: Chloe Fontaine approves IAM user creation
+→ Access is reviewed quarterly; unused accounts are disabled after 45 days
+
+ISSUE: "I think I received a phishing email"
+→ Do NOT click any links or download attachments
+→ Forward the email to phishing@nexacorp.com
+→ Call the Security Hotline: +1-312-555-0194 (Priya Nair)
+→ Submit a TICKETSYS "Security Incident" ticket
+→ Oliver Pine and Priya Nair will triage within 30 minutes
+
+ISSUE: "VPN keeps disconnecting"
+→ Check your internet connection stability first
+→ Ensure home WiFi meets requirements (WPA2/WPA3, recent firmware)
+→ Try a wired ethernet connection if possible
+→ Check if your NEXAVPN client is version 3.4.1 or above
+→ If disconnects happen exactly every 30 minutes, your session token
+  may be misconfigured — submit TICKETSYS to Jordan Okafor
+
+================================================================================
+QUICK REFERENCE: ERROR CODE → CONTACT LOOKUP
+================================================================================
+
+ERR-AUTH-*     → Marcus Thompson (m.thompson@nexacorp.com)
+DB-*           → Derek Walsh (d.walsh@nexacorp.com)
+VPN-*          → Jordan Okafor (j.okafor@nexacorp.com)
+SYNC-*         → Chloe Fontaine (c.fontaine@nexacorp.com)
+MAIL-*         → Marcus Thompson (m.thompson@nexacorp.com)
+BUILD-*        → Nathan Xu (n.xu@nexacorp.com)
+FW-*           → Oliver Pine (o.pine@nexacorp.com)
+HR-*           → Tomas Brewer (t.brewer@nexacorp.com)
+MONITOR-*      → Nathan Xu (n.xu@nexacorp.com)
+BACKUP-*       → Farida Hassan (f.hassan@nexacorp.com)
+API-*          → Raj Patel (r.patel@nexacorp.com)
+
+For ALL P1 emergencies: Sarah Jenkins — sarah.j@nexacorp.com — +1-312-555-0188
+For ALL security incidents: Priya Nair — p.nair@nexacorp.com — +1-312-555-0194
+
+================================================================================
+END OF RUNBOOK — Version 2.1
+For updates, contact Marcus Thompson or Jordan Okafor
+================================================================================

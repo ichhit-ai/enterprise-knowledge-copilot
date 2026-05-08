@@ -1,0 +1,13 @@
+langchain>=0.3
+langchain-community
+langchain-ollama
+langchain-huggingface
+langgraph
+chromadb
+rank-bm25
+networkx
+spacy
+streamlit
+sentence-transformers
+PyMuPDF
+numpy

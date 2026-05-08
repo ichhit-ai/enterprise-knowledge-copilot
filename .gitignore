@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# Local Databases
+.index/
+chroma.sqlite3
+
+# Logs
+audit.jsonl
+feedback.jsonl
+
+# Environment
+.env
+venv/
+env/

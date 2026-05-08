@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise Copilot - The Ultimate Educational Masterclass</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f17; --surface: #13161f; --surface2: #1a1e2e; --border: #252a3d;
+    --accent: #7c6af7; --accent2: #3ecfcf; --accent3: #f7796a; --accent4: #f5c542;
+    --text: #e2e6f3; --text-muted: #6b7399; --code-bg: #0a0c14; --green: #4ade80;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: 'Sora', sans-serif; font-size: 16px; line-height: 1.8; }
+  
+  #sidebar {
+    position: fixed; top: 0; left: 0; width: 300px; height: 100vh;
+    background: var(--surface); border-right: 1px solid var(--border);
+    overflow-y: auto; z-index: 100; padding: 0 0 40px 0; transition: transform .3s;
+  }
+  #sidebar::-webkit-scrollbar { width: 6px; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .sidebar-header { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); background: var(--surface2); }
+  .sidebar-header h2 { font-size: 15px; font-weight: 800; color: var(--accent); letter-spacing: .08em; text-transform: uppercase; }
+  .sidebar-header p { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+  .nav-module { margin-top: 8px; }
+  .nav-module-title {
+    display: flex; align-items: center; gap: 10px; padding: 12px 20px; font-size: 13.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em; cursor: pointer; border: none; background: none;
+    width: 100%; text-align: left; color: var(--text-muted); transition: color .2s;
+  }
+  .nav-module-title:hover { color: var(--text); }
+  .nav-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .nav-sub { display: none; }
+  .nav-sub.open { display: block; }
+  .nav-sub a {
+    display: block; padding: 8px 20px 8px 38px; font-size: 13px; color: var(--text-muted);
+    text-decoration: none; transition: all .2s; border-left: 2px solid transparent; margin-left: 20px;
+  }
+  .nav-sub a:hover { color: var(--text); border-left-color: var(--accent); background: rgba(124,106,247,.08); }
+  
+  #main { margin-left: 300px; padding: 0; min-height: 100vh; }
+  .hero {
+    background: linear-gradient(135deg, #0d0f17 0%, #131626 50%, #0f1520 100%);
+    border-bottom: 1px solid var(--border); padding: 80px 70px 70px; position: relative; overflow: hidden;
+  }
+  .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 700px 500px at 80% 50%, rgba(124,106,247,.15), transparent); }
+  .hero-badge {
+    display: inline-block; background: rgba(124,106,247,.15); color: var(--accent); border: 1px solid rgba(124,106,247,.3);
+    font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 6px 14px; border-radius: 20px; margin-bottom: 24px;
+  }
+  .hero h1 { font-size: clamp(36px,5vw,60px); font-weight: 800; line-height: 1.15; color: var(--text); position: relative; }
+  .hero h1 span { color: var(--accent); }
+  .hero-sub { margin-top: 18px; font-size: 17px; color: var(--text-muted); max-width: 750px; position: relative; line-height: 1.7; }
+  
+  .content-area { padding: 60px 70px; max-width: 1200px; }
+  .module-header {
+    display: flex; align-items: flex-start; gap: 20px; padding: 40px 45px; border-radius: 16px; margin-bottom: 45px;
+    border: 1px solid var(--border); position: relative; overflow: hidden;
+  }
+  .module-header::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,.03) 0%, transparent 60%); }
+  .module-num {
+    width: 60px; height: 60px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; flex-shrink: 0;
+  }
+  .module-header h2 { font-size: 28px; font-weight: 800; line-height: 1.3; }
+  .module-header p { color: var(--text-muted); font-size: 16px; margin-top: 8px; }
+
+  .topic { margin-bottom: 60px; }
+  .topic-title { font-size: 24px; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #fff; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  .topic-title::before { content: ''; display: block; width: 5px; height: 24px; border-radius: 3px; background: var(--accent); flex-shrink: 0; }
+  .topic p, .topic li { color: #d0d8f0; font-size: 16.5px; margin-bottom: 16px; line-height: 1.8;}
+  .topic ul, .topic ol { padding-left: 28px; margin-top: 10px; margin-bottom: 24px;}
+  
+  .code-wrap { margin: 24px 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  .code-top { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); padding: 12px 18px; font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; border-bottom: 1px solid var(--border); }
+  .code-top .dots { display: flex; gap: 8px; }
+  .code-top .dots span { width: 12px; height: 12px; border-radius: 50%; background: #3a3f52; }
+  .code-top .dots span:nth-child(1) { background: #f7796a; }
+  .code-top .dots span:nth-child(2) { background: var(--accent4); }
+  .code-top .dots span:nth-child(3) { background: var(--green); }
+  pre { background: var(--code-bg); padding: 24px; overflow-x: auto; margin: 0; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 14.5px; line-height: 1.8; color: #c9d3f0; }
+  
+  .callout { border-left: 5px solid var(--accent); background: rgba(124,106,247,.08); padding: 20px 24px; border-radius: 0 10px 10px 0; margin: 30px 0; font-size: 16px; }
+  .callout.tip { border-color: var(--accent2); background: rgba(62,207,207,.08); }
+  .callout.warn { border-color: var(--accent3); background: rgba(247,121,106,.08); }
+  .callout strong { display: block; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; color: var(--accent); font-weight: 800; }
+
+  .qa-section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px 36px; margin: 50px 0 70px; }
+  .qa-section h3 { font-size: 18px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent4); margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+  .qa-item { margin-bottom: 18px; border-radius: 10px; overflow: hidden; }
+  .qa-q { background: var(--surface2); padding: 16px 20px; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; transition: background .2s; border: 1px solid var(--border); border-radius: 10px; }
+  .qa-q:hover { background: rgba(124,106,247,.12); }
+  .qa-a { display: none; background: rgba(10,12,20,.7); border: 1px solid var(--border); border-top: none; padding: 20px 22px; font-size: 15px; color: #b0bce0; border-radius: 0 0 10px 10px; line-height: 1.8; }
+  .qa-q.open { border-radius: 10px 10px 0 0; border-bottom: none; }
+  .qa-a.open { display: block; }
+
+  p code, li code { background: var(--surface2); padding: 3px 8px; border-radius: 6px; font-size: 14.5px; color: var(--accent2); border: 1px solid var(--border); }
+  .module-divider { border: none; border-top: 1px solid var(--border); margin: 40px 0 80px; }
+  #progress-bar { position: fixed; top: 0; left: 300px; right: 0; height: 4px; background: var(--surface2); z-index: 200; }
+  #progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .1s; }
+  
+  .kw { color: #c792ea; font-weight: bold; }
+  .fn { color: #82aaff; }
+  .str { color: #c3e88d; }
+  .num { color: #f78c6c; }
+  .cm { color: #546e7a; font-style: italic; }
+  .cls { color: #ffcb6b; }
+  .op { color: #89ddff; }
+</style>
+</head>
+<body>
+<div id="progress-bar"><div id="progress-fill"></div></div>
+
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <h2>Enterprise Copilot</h2>
+    <p>The Ultra Masterclass</p>
+  </div>
+  <div class="nav-module">
+    <button class="nav-module-title" onclick="toggleNav(1)"><span class="nav-dot" style="background:#7c6af7"></span> 1. The Theory</button>
+    <div class="nav-sub" id="nsub1">
+      <a href="#m1-rag">What is RAG?</a>
+      <a href="#m1-vector">Vector Math Explained</a>
+      <a href="#m1-bm25">The BM25 Algorithm</a>
+      <a href="#m1-graph">Knowledge Graphs</a>
+      <a href="#m1-agents">Agentic Workflows</a>
+    </div>
+  </div>
+  <div class="nav-module">
+    <button class="nav-module-title" onclick="toggleNav(2)"><span class="nav-dot" style="background:#3ecfcf"></span> 2. Ingest.py</button>
+    <div class="nav-sub" id="nsub2">
+      <a href="#m2-loaders">Document Loaders</a>
+      <a href="#m2-pii">PII Redaction (spaCy)</a>
+      <a href="#m2-chunking">Chunking Math</a>
+      <a href="#m2-vector-build">Building Vector DB</a>
+      <a href="#m2-graph">Graph Construction</a>
+    </div>
+  </div>
+  <div class="nav-module">
+    <button class="nav-module-title" onclick="toggleNav(3)"><span class="nav-dot" style="background:#f7796a"></span> 3. Retriever.py</button>
+    <div class="nav-sub" id="nsub3">
+      <a href="#m3-init">Index Persistence</a>
+      <a href="#m3-vector">Vector Execution</a>
+      <a href="#m3-bm25">BM25 Execution</a>
+      <a href="#m3-graph">Graph Traversal</a>
+      <a href="#m3-rrf">Rank Fusion (RRF)</a>
+    </div>
+  </div>
+  <div class="nav-module">
+    <button class="nav-module-title" onclick="toggleNav(4)"><span class="nav-dot" style="background:#f5c542"></span> 4. Agent.py</button>
+    <div class="nav-sub" id="nsub4">
+      <a href="#m4-state">LangGraph State</a>
+      <a href="#m4-router">Keyword Routing</a>
+      <a href="#m4-tools">Tool Execution</a>
+      <a href="#m4-prompt">Prompt Engineering</a>
+      <a href="#m4-faith">Faithfulness Metric</a>
+      <a href="#m4-compile">Graph Compilation</a>
+    </div>
+  </div>
+  <div class="nav-module">
+    <button class="nav-module-title" onclick="toggleNav(5)"><span class="nav-dot" style="background:#a8edab"></span> 5. App.py</button>
+    <div class="nav-sub" id="nsub5">
+      <a href="#m5-cache">Streamlit Caching</a>
+      <a href="#m5-ui">UI & Markdown</a>
+      <a href="#m5-run">Running Locally</a>
+    </div>
+  </div>
+  <div class="nav-module">
+    <button class="nav-module-title" onclick="toggleNav(6)"><span class="nav-dot" style="background:#ff99c2"></span> 6. Advanced Q&A</button>
+    <div class="nav-sub" id="nsub6">
+      <a href="#m6-qa">20 Deep Architectural FAQs</a>
+    </div>
+  </div>
+  <div class="nav-module">
+    <button class="nav-module-title" onclick="toggleNav(7)"><span class="nav-dot" style="background:#4ade80"></span> 7. Productionizing</button>
+    <div class="nav-sub" id="nsub7">
+      <a href="#m7-scale">Scaling to Enterprise</a>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+  <div class="hero">
+    <div class="hero-badge">The Ultra Expansion</div>
+    <h1>Enterprise Knowledge Copilot<br><span>Definitive Masterclass</span></h1>
+    <p class="hero-sub">You asked for more. You want the deep educational rigor combined with massive, exhaustive detail covering every single crevice of the system. This guide breaks down the entire codebase, the mathematical proofs, the UI execution flow, advanced Q&A, and enterprise-grade productionizing.</p>
+  </div>
+
+  <section class="content-area" id="module1">
+    <div class="module-header" style="background:linear-gradient(135deg,rgba(124,106,247,.1),rgba(124,106,247,.03))">
+      <div class="module-num" style="background:rgba(124,106,247,.15);color:#7c6af7">01</div>
+      <div>
+        <h2>Module 1: The Theoretical Foundation</h2>
+        <p>Before executing the code, we must understand the core principles of AI Search and Agents.</p>
+      </div>
+    </div>
+    
+    <div class="topic" id="m1-rag">
+      <div class="topic-title">Retrieval-Augmented Generation (RAG)</div>
+      <p>An LLM is fundamentally a next-word predictor. When deployed in a corporate environment, it faces the <strong>"Knowledge Cutoff & Privacy Wall"</strong> problem. It knows nothing about your internal Slack messages, JIRA tickets, or HR handbooks.</p>
+      <p>Fine-tuning the model to memorize these documents is a horrific idea for three reasons:</p>
+      <ol>
+        <li>It costs thousands of dollars to train.</li>
+        <li>If a document changes tomorrow, the model's weights are permanently outdated.</li>
+        <li>Neural networks are terrible at exact fact-retention (it will blur policy numbers).</li>
+      </ol>
+      <p><strong>RAG is the solution.</strong> At inference time, we take the user's query, search an external database of text files, pull out the top 5 most relevant paragraphs, and paste them directly into the LLM's prompt before asking it to answer.</p>
+    </div>
+
+    <div class="topic" id="m1-vector">
+      <div class="topic-title">Vector Spaces & Semantic Search</div>
+      <p>Traditional search uses <code>Ctrl+F</code> (string matching). If you search "Time Off", a system without "Time Off" exactly in the text will fail, even if the text says "Vacation Policy".</p>
+      <p><strong>Semantic Search</strong> uses Embedding Models to fix this. An embedding model converts a block of text into an array of floating-point numbers. In our project, <code>BAAI/bge-small-en-v1.5</code> converts text into an array of 384 numbers. This array represents a coordinate in a 384-dimensional space.</p>
+      <p>Because the model was trained on billions of sentences, it mapped the word "Vacation" and "Time Off" to nearly identical coordinates. When we want to search, we convert the user's query into a vector and measure the <strong>Cosine Distance</strong> to all document vectors. The ones with the shortest distance are retrieved.</p>
+    </div>
+
+    <div class="topic" id="m1-bm25">
+      <div class="topic-title">The BM25 Algorithm (Keyword Search)</div>
+      <p>Vectors fail catastrophically at highly specific identifiers. If you search for <code>TKT-4912</code>, the vector model might smooth out the numbers and just return "General IT Tickets."</p>
+      <p>We use <strong>BM25 (Best Matching 25)</strong> to cover this blind spot. BM25 is an advanced TF-IDF algorithm:</p>
+      <ul>
+        <li><strong>Term Frequency (TF):</strong> The more times "TKT-4912" appears in a document, the higher the score. It uses an asymptotic curve, so 10 mentions isn't exactly 10x better than 1 mention, preventing keyword stuffing.</li>
+        <li><strong>Inverse Document Frequency (IDF):</strong> If a word appears in almost every document (like "the" or "ticket"), its IDF score is basically zero. If "TKT-4912" appears in exactly one document out of 10,000, its IDF score is massive.</li>
+      </ul>
+      <p>Hybrid Search (combining Vector + BM25) is the industry standard for production systems.</p>
+    </div>
+
+    <div class="topic" id="m1-graph">
+      <div class="topic-title">Knowledge Graphs & Relational Triples</div>
+      <p>Search engines return documents. But what if the user's question isn't in a single document? <em>"Who manages the person who owns the Auth-Gateway?"</em></p>
+      <p>A Knowledge Graph solves this by storing data as <strong>Nodes</strong> (Entities like People, Systems) and <strong>Edges</strong> (Relationships like "MANAGES", "OWNS"). This allows the system to instantly traverse links: <code>(Sarah) -> [MANAGES] -> (Marcus) -> [OWNS] -> (Auth-Gateway)</code>, synthesizing an answer instantly.</p>
+    </div>
+    
+    <div class="topic" id="m1-agents">
+      <div class="topic-title">Agentic Workflows (LangGraph)</div>
+      <p>A simple RAG app is linear. An <strong>Agent</strong> is capable of making decisions. It uses a State Machine (via LangGraph) to analyze the query, decide WHICH database to search (Docs vs Tickets), execute the search, evaluate its own answer, and determine if it needs to escalate to a human.</p>
+    </div>
+  </section>
+  <hr class="module-divider">
+
+  <section class="content-area" id="module2">
+    <div class="module-header" style="background:linear-gradient(135deg,rgba(62,207,207,.1),rgba(62,207,207,.03))">
+      <div class="module-num" style="background:rgba(62,207,207,.15);color:#3ecfcf">02</div>
+      <div>
+        <h2>Module 2: The Ingestion Engine (ingest.py)</h2>
+        <p>Before AI can search, we must clean, slice, and structure the data.</p>
+      </div>
+    </div>
+
+    <div class="topic" id="m2-loaders">
+      <div class="topic-title">Document Extraction (Loaders)</div>
+      <p>Data exists in wildly different formats. A text file is easy to read, but a PDF contains styling, images, and invisible boundaries. A CSV is a matrix of data. Our loader must handle them all and convert them into standard <code>Document</code> objects with <code>page_content</code> and <code>metadata</code>.</p>
+      <ul>
+        <li><strong>TXT:</strong> Loaded fully as a single string.</li>
+        <li><strong>PDF:</strong> We use <code>PyMuPDF (fitz)</code>, which is significantly faster and more accurate than older libraries like <code>PyPDF2</code>. It reads the raw text stream from the binary data page by page.</li>
+        <li><strong>CSV:</strong> If we dump a CSV as a single string, the LLM won't understand rows. Instead, we iterate row by row and format it into <code>"Column1: Value | Column2: Value"</code>. Every row becomes its own <code>Document</code>.</li>
+      </ul>
+    </div>
+
+    <div class="topic" id="m2-pii">
+      <div class="topic-title">PII Redaction via spaCy NER</div>
+      <p>Enterprise data contains Personally Identifiable Information (PII). We cannot store human names or phone numbers in a vector database because doing so creates a permanent privacy violation (you cannot easily 'delete' a name once it is mixed into a vector). We must scrub it BEFORE embedding.</p>
+      
+      <div class="code-wrap">
+        <div class="code-top"><div class="dots"><span></span><span></span><span></span></div><span>ingest.py - Redaction Logic</span></div>
+        <pre><code><span class="kw">def</span> <span class="fn">redact</span>(text):
+    <span class="cm"># 1. Fast Regex for structured PII</span>
+    text <span class="op">=</span> EMAIL_RE.<span class="fn">sub</span>(<span class="str">"[REDACTED_EMAIL]"</span>, text)
+    text <span class="op">=</span> PHONE_RE.<span class="fn">sub</span>(<span class="str">"[REDACTED_PHONE]"</span>, text)
+    
+    <span class="cm"># 2. Neural Network (NER) for human names</span>
+    doc <span class="op">=</span> <span class="fn">nlp</span>(text)
+    
+    <span class="cm"># 3. Extract and sort the names by length DESCENDING</span>
+    persons <span class="op">=</span> <span class="fn">sorted</span>(<span class="fn">set</span>(e.text <span class="kw">for</span> e <span class="kw">in</span> doc.ents <span class="kw">if</span> e.label_ <span class="op">==</span> <span class="str">"PERSON"</span>), 
+                     key<span class="op">=</span><span class="fn">len</span>, reverse<span class="op">=</span><span class="kw">True</span>)
+    
+    <span class="kw">for</span> p <span class="kw">in</span> persons:
+        text <span class="op">=</span> text.<span class="fn">replace</span>(p, <span class="str">"[REDACTED_PERSON]"</span>)
+    <span class="kw">return</span> text</code></pre>
+      </div>
+      <div class="callout warn">
+        <strong>The "Descending Sort" Data Leak Bug</strong><br>
+        Why use <code>reverse=True</code>? Imagine the text says: "Dr. Sarah Jenkins". The NER model will extract "Sarah Jenkins" but might also extract just "Sarah". If we replace "Sarah" first, the string becomes: "Dr. [REDACTED_PERSON] Jenkins". We just leaked her last name! By sorting longest to shortest, we ensure the entire name is safely replaced.
+      </div>
+    </div>
+
+    <div class="topic" id="m2-chunking">
+      <div class="topic-title">The Mathematics of Chunking</div>
+      <p>Embedding models have a "Context Window" limit. <code>bge-small</code> handles 512 tokens. If we slice the text blindly at 800 characters, we introduce a catastrophic bug.</p>
+      <div class="code-wrap">
+        <div class="code-top"><div class="dots"><span></span><span></span><span></span></div><span>ingest.py - Sliding Window</span></div>
+        <pre><code><span class="kw">def</span> <span class="fn">chunk_text</span>(text, size<span class="op">=</span><span class="num">800</span>, overlap<span class="op">=</span><span class="num">150</span>):
+    chunks, start <span class="op">=</span> [], <span class="num">0</span>
+    <span class="kw">while</span> start <span class="op">&lt;</span> <span class="fn">len</span>(text):
+        end <span class="op">=</span> start <span class="op">+</span> size
+        chunks.<span class="fn">append</span>(text[start:end])
+        
+        <span class="cm"># CRITICAL: Move back by 'overlap' amount for the next chunk</span>
+        start <span class="op">=</span> end <span class="op">-</span> overlap
+    <span class="kw">return</span> chunks</code></pre>
+      </div>
+      <p><strong>Why overlap?</strong> Imagine the critical sentence is at character 780: <em>"The master password to reset the server is 'Nexa123'."</em> Without overlap, Chunk 1 ends with <em>"The master password to reset the server "</em>, and Chunk 2 begins with <em>"is 'Nexa123'."</em> The context is completely destroyed. Overlapping by 150 characters guarantees that the boundary sentence will appear entirely inside at least one chunk.</p>
+    </div>
+
+    <div class="topic" id="m2-vector-build">
+      <div class="topic-title">Building the Vector and Keyword Databases</div>
+      <p>Once chunked, the text is pushed to ChromaDB. Chroma automatically batches the API calls to the local huggingface embedding model, generates the 384-dim vectors, and writes them to a SQLite database on disk.</p>
+      <p>For BM25, we tokenize every document (split by spaces/punctuation) and pass it to the <code>rank_bm25</code> constructor. We then save the BM25 object using <code>pickle</code>.</p>
+      <div class="callout tip">
+        <strong>Security Warning: Pickling</strong><br>
+        We use Python's <code>pickle</code> to save the BM25 model to disk. In a production enterprise setting, you should <strong>never</strong> load pickle files from untrusted sources, as unpickling can execute arbitrary code. For a local system, it's fine, but in prod, we'd use Elasticsearch for keywords.
+      </div>
+    </div>
+
+    <div class="topic" id="m2-graph">
+      <div class="topic-title">Graph Construction (NetworkX)</div>
+      <p>We build a Directed Graph (<code>DiGraph</code>) using NetworkX. Directed means the relationship has an arrow: A -> B is different from B -> A.</p>
+      <ol>
+        <li><strong>Explicit Triples:</strong> From the <code>org_chart.csv</code>, we explicitly know the Subject, Predicate, and Object. We add them natively: <code>G.add_edge(Person, Department, relation="WORKS_IN")</code>.</li>
+        <li><strong>Co-mention Inference:</strong> Unstructured IT tickets don't have explicit relations. We use spaCy to extract all entities (VPN, ServerX, Marcus) from the ticket. If they appear in the same paragraph, we assume a relationship. We add an edge with <code>relation="CO_MENTIONED"</code> and increment its <code>weight</code> by 1. A weight of 15 means they appeared together 15 times, implying a very strong relationship!</li>
+      </ol>
+    </div>
+  </section>
+  <hr class="module-divider">
+
+  <section class="content-area" id="module3">
+    <div class="module-header" style="background:linear-gradient(135deg,rgba(247,121,106,.1),rgba(247,121,106,.03))">
+      <div class="module-num" style="background:rgba(247,121,106,.15);color:#f7796a">03</div>
+      <div>
+        <h2>Module 3: The Three-Headed Retriever (retriever.py)</h2>
+        <p>Combining Semantic math, Keyword Math, and Graph Traversal into a single, unified search engine.</p>
+      </div>
+    </div>
+
+    <div class="topic" id="m3-init">
+      <div class="topic-title">Retriever Initialization & Persistence</div>
+      <p>The <code>Retriever</code> class is a Singleton-like wrapper that holds all three of our databases in RAM (or connected to disk).</p>
+      <div class="code-wrap">
+        <div class="code-top"><div class="dots"><span></span><span></span><span></span></div><span>retriever.py - Init</span></div>
+        <pre><code><span class="kw">class</span> <span class="cls">Retriever</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        <span class="cm"># Load the SAME embedding model used in ingestion</span>
+        emb <span class="op">=</span> <span class="fn">HuggingFaceEmbeddings</span>(model_name<span class="op">=</span><span class="str">"BAAI/bge-small-en-v1.5"</span>)
+        
+        <span class="cm"># 1. Connect to Chroma DB on disk</span>
+        self.chroma <span class="op">=</span> <span class="fn">Chroma</span>(persist_directory<span class="op">=</span><span class="str">"data/index/chroma"</span>, embedding_function<span class="op">=</span>emb)
+
+        <span class="cm"># 2. Unpickle BM25 and the document array</span>
+        <span class="kw">with</span> <span class="fn">open</span>(<span class="str">"data/index/bm25.pkl"</span>, <span class="str">"rb"</span>) <span class="kw">as</span> f:
+            self.bm25, self.bm25_docs <span class="op">=</span> pickle.<span class="fn">load</span>(f)
+
+        <span class="cm"># 3. Unpickle the NetworkX Graph</span>
+        <span class="kw">with</span> <span class="fn">open</span>(<span class="str">"data/index/graph.pkl"</span>, <span class="str">"rb"</span>) <span class="kw">as</span> f:
+            self.graph <span class="op">=</span> pickle.<span class="fn">load</span>(f)</code></pre>
+      </div>
+    </div>
+
+    <div class="topic" id="m3-vector">
+      <div class="topic-title">Vector Execution & Filtering</div>
+      <p>When searching ChromaDB, we can inject a <code>filter_dict</code>. This is incredibly powerful. If the LangGraph router decides we only need IT Tickets, we pass <code>filter={"type": "ticket"}</code>. ChromaDB uses its SQLite metadata table to instantly prune the search space before doing the expensive Cosine Math, saving massive amounts of compute time.</p>
+    </div>
+
+    <div class="topic" id="m3-bm25">
+      <div class="topic-title">BM25 Execution Loop</div>
+      <p>The <code>rank_bm25</code> library does not hold metadata. It just returns an array of float scores. We must map these scores back to the original documents using <code>enumerate</code>, sort them, and then manually apply the <code>filter_dict</code>.</p>
+    </div>
+
+    <div class="topic" id="m3-graph">
+      <div class="topic-title">Graph Traversal: Successors vs Predecessors</div>
+      <p>When the query contains an entity (e.g., "Marcus Thompson"), we traverse the graph. Because our Graph is Directed (arrows point one way), we must look in both directions.</p>
+      <div class="code-wrap">
+        <div class="code-top"><div class="dots"><span></span><span></span><span></span></div><span>retriever.py - Graph Traversal</span></div>
+        <pre><code><span class="kw">def</span> <span class="fn">search_graph</span>(self, entities):
+    results <span class="op">=</span> []
+    <span class="kw">for</span> entity <span class="kw">in</span> entities:
+        <span class="cm"># Find all exact or partial node matches</span>
+        matches <span class="op">=</span> [n <span class="kw">for</span> n <span class="kw">in</span> self.graph.nodes <span class="kw">if</span> entity.<span class="fn">lower</span>() <span class="kw">in</span> n.<span class="fn">lower</span>()]
+        
+        <span class="kw">for</span> node <span class="kw">in</span> matches:
+            <span class="cm"># Outgoing edges: What does Marcus own/do?</span>
+            out <span class="op">=</span> [(node, self.graph[node][t].<span class="fn">get</span>(<span class="str">"relation"</span>), t) 
+                   <span class="kw">for</span> t <span class="kw">in</span> self.graph.<span class="fn">successors</span>(node)]
+            
+            <span class="cm"># Incoming edges: Who manages/owns Marcus?</span>
+            inc <span class="op">=</span> [(s, self.graph[s][node].<span class="fn">get</span>(<span class="str">"relation"</span>), node) 
+                   <span class="kw">for</span> s <span class="kw">in</span> self.graph.<span class="fn">predecessors</span>(node)]
+            
+            results.<span class="fn">extend</span>(out <span class="op">+</span> inc)
+    <span class="kw">return</span> results</code></pre>
+      </div>
+      <p>These Triples (Subject, Predicate, Object) are converted into text strings like <em>"Marcus - OWNS_SYSTEM - AuthGateway"</em> and injected straight into the LLM's prompt.</p>
+    </div>
+
+    <div class="topic" id="m3-rrf">
+      <div class="topic-title">Rank Fusion: The Math of Consensus (RRF)</div>
+      <p>We now have two lists of documents: Top 5 from Vector, and Top 5 from BM25. The scores are mathematically incompatible (Distances vs TF-IDF floats). We merge them using <strong>Reciprocal Rank Fusion (RRF)</strong>, which completely ignores raw scores and only looks at their integer Rank (1st, 2nd, etc).</p>
+      <p>Formula: <code>RRF_Score = 1 / (60 + rank)</code></p>
+      <div class="code-wrap">
+        <div class="code-top"><div class="dots"><span></span><span></span><span></span></div><span>retriever.py - RRF Algorithm</span></div>
+        <pre><code><span class="kw">def</span> <span class="fn">_rrf_fuse</span>(self, sem_results, kw_results, k):
+    scored <span class="op">=</span> {}
+    
+    <span class="cm"># 1. Apply formula to Semantic Ranks</span>
+    <span class="kw">for</span> rank, (doc, dist) <span class="kw">in</span> <span class="fn">enumerate</span>(sem_results):
+        <span class="cm"># We use the first 120 chars of the text as a unique ID</span>
+        key <span class="op">=</span> doc.page_content[:<span class="num">120</span>]
+        scored[key] <span class="op">=</span> {<span class="str">"doc"</span>: doc, <span class="str">"rrf"</span>: <span class="num">0</span>}
+        scored[key][<span class="str">"rrf"</span>] <span class="op">+=</span> <span class="num">1</span> <span class="op">/</span> (<span class="num">60</span> <span class="op">+</span> rank)
+
+    <span class="cm"># 2. Add BM25 Ranks to the SAME document score</span>
+    <span class="kw">for</span> rank, (doc, bm_score) <span class="kw">in</span> <span class="fn">enumerate</span>(kw_results):
+        key <span class="op">=</span> doc.page_content[:<span class="num">120</span>]
+        <span class="kw">if</span> key <span class="kw">not</span> <span class="kw">in</span> scored:
+            scored[key] <span class="op">=</span> {<span class="str">"doc"</span>: doc, <span class="str">"rrf"</span>: <span class="num">0</span>}
+        scored[key][<span class="str">"rrf"</span>] <span class="op">+=</span> <span class="num">1</span> <span class="op">/</span> (<span class="num">60</span> <span class="op">+</span> rank)
+
+    <span class="cm"># 3. Sort by highest RRF score</span>
+    fused <span class="op">=</span> <span class="fn">sorted</span>(scored.<span class="fn">values</span>(), key<span class="op">=</span><span class="kw">lambda</span> x: x[<span class="str">"rrf"</span>], reverse<span class="op">=</span><span class="kw">True</span>)[:k]
+    <span class="kw">return</span> [item[<span class="str">"doc"</span>] <span class="kw">for</span> item <span class="kw">in</span> fused]</code></pre>
+      </div>
+      <div class="callout tip">
+        <strong>A Worked Example</strong><br>
+        Let's say Document A is Rank #1 in Vector, and Rank #4 in BM25.<br>
+        <code>Vector = 1 / (60 + 1) = 0.01639</code><br>
+        <code>BM25 = 1 / (60 + 4) = 0.01562</code><br>
+        <code>Total RRF = 0.03201</code><br><br>
+        Now let's say Document B is Rank #2 in Vector, but didn't even appear in the BM25 list.<br>
+        <code>Vector = 1 / (60 + 2) = 0.01612</code><br>
+        <code>BM25 = 0</code><br>
+        <code>Total RRF = 0.01612</code><br><br>
+        Document A destroys Document B! RRF mathematically proves that <strong>Consensus is King</strong>. A document that both systems agree is "pretty good" will beat a document that only one system thinks is "perfect".
+      </div>
+    </div>
+  </section>
+  <hr class="module-divider">
+
+  <section class="content-area" id="module4">
+    <div class="module-header" style="background:linear-gradient(135deg,rgba(245,197,66,.1),rgba(245,197,66,.03))">
+      <div class="module-num" style="background:rgba(245,197,66,.15);color:#f5c542">04</div>
+      <div>
+        <h2>Module 4: The Agentic Brain (agent.py)</h2>
+        <p>Routing, LangGraph State Machines, Prompt Engineering, and Hallucination Guardrails.</p>
+      </div>
+    </div>
+
+    <div class="topic" id="m4-state">
+      <div class="topic-title">LangGraph State vs Chain</div>
+      <p>A standard RAG pipeline is a linear chain: <code>Prompt -> Retrieve -> Generate</code>. It is rigid and cannot adapt. If the retriever fails to find anything, a chain will just pass empty text to the LLM, causing a hallucination.</p>
+      <p><strong>LangGraph</strong> turns the pipeline into a Directed Graph (a State Machine). Instead of passing parameters between functions, we define a <code>TypedDict</code> called <strong>State</strong>. The State holds everything happening in the current session. Every node in the graph takes the State, modifies it, and passes it to the next node.</p>
+      <div class="code-wrap">
+        <div class="code-top"><div class="dots"><span></span><span></span><span></span></div><span>agent.py - State Dictionary</span></div>
+        <pre><code><span class="kw">class</span> <span class="cls">State</span>(TypedDict):
+    question: <span class="fn">str</span>          <span class="cm"># What the user asked</span>
+    route: <span class="fn">str</span>             <span class="cm"># 'docs', 'tickets', or 'summarize'</span>
+    documents: <span class="fn">list</span>        <span class="cm"># Retrieved doc objects from Chroma/BM25</span>
+    graph_context: <span class="fn">str</span>     <span class="cm"># NetworkX relationships as text</span>
+    retrieval_score: <span class="fn">float</span> <span class="cm"># The RRF math output</span>
+    answer: <span class="fn">str</span>            <span class="cm"># The LLM's final response</span>
+    faithfulness: <span class="fn">float</span>    <span class="cm"># Did the LLM hallucinate? (0.0 to 1.0)</span></code></pre>
+      </div>
+    </div>
+
+    <div class="topic" id="m4-router">
+      <div class="topic-title">The Deterministic Router</div>
+      <p>The first node in our graph is the Router. It looks at the user's question and decides which Retrieval Tool to use. Why do we use hardcoded keywords instead of asking the LLM to route it?</p>
+      <p><strong>Latency and Accuracy.</strong> We are running a 3-Billion parameter Llama 3.2 model locally. Small models are notoriously bad at strict classification. Sometimes they return "docs", sometimes "Docs", sometimes "I think it is a document". A keyword router executes in 0.0001 seconds and guarantees 100% deterministic behavior.</p>
+    </div>
+
+    <div class="topic" id="m4-prompt">
+      <div class="topic-title">Prompt Engineering</div>
+      <p>Notice how strict the prompt is. We don't just say "answer the question." We enforce specific behavior for edge cases.</p>
+      <div class="code-wrap">
+        <div class="code-top"><div class="dots"><span></span><span></span><span></span></div><span>agent.py - Prompt</span></div>
+        <pre><code>prompt <span class="op">=</span> <span class="str">f"""You are NexaCorp's internal knowledge copilot. Answer using ONLY the context below.
+For "who manages/owns/resolves" questions, check the Entity Relationships FIRST.
+If the answer isn't in the context, say: "This information is not available in the internal docs. Please raise a ticket on TICKETSYS."
+Cite the source.
+
+Question: {q}
+
+Entity Relationships:
+{graph if graph else "None"}
+
+Document Context:
+{ctx}
+
+Answer:"""</span></code></pre>
+      </div>
+    </div>
+
+    <div class="topic" id="m4-faith">
+      <div class="topic-title">The Faithfulness Metric (Set Theory Math)</div>
+      <p>We instructed the LLM: <em>"Answer using ONLY the retrieved context."</em> But LLMs are designed to predict the next word—they often sneak in outside knowledge. How do we programmatically detect if the LLM cheated?</p>
+      <p>We use <strong>Token Overlap Set Theory</strong>. We break both the Context and the Answer into Sets of words. We then calculate the intersection of those two Sets.</p>
+      <div class="code-wrap">
+        <div class="code-top"><div class="dots"><span></span><span></span><span></span></div><span>agent.py - Hallucination Guardrail</span></div>
+        <pre><code><span class="kw">def</span> <span class="fn">compute_faithfulness</span>(answer, contexts):
+    <span class="cm"># Convert the LLM's answer into a Set of unique words</span>
+    answer_tokens <span class="op">=</span> <span class="fn">set</span>(answer.<span class="fn">lower</span>().<span class="fn">split</span>())
+    
+    <span class="cm"># Convert the retrieved documents into a massive Set of words</span>
+    ctx_tokens <span class="op">=</span> <span class="fn">set</span>()
+    <span class="kw">for</span> c <span class="kw">in</span> contexts:
+        ctx_tokens.<span class="fn">update</span>(c.<span class="fn">lower</span>().<span class="fn">split</span>())
+    
+    <span class="cm"># Math: Intersection / Total Answer Tokens</span>
+    overlap <span class="op">=</span> answer_tokens <span class="op">&amp;</span> ctx_tokens
+    <span class="kw">return</span> <span class="fn">round</span>(<span class="fn">len</span>(overlap) <span class="op">/</span> <span class="fn">len</span>(answer_tokens), <span class="num">2</span>)</code></pre>
+      </div>
+      <p>If the LLM outputs 10 words, and only 4 of those words actually existed in the retrieved documents, the Faithfulness score is 0.40 (40%). This triggers a massive red warning pill in the UI. If the score is 0.90, we know the LLM pulled the answer directly from the text.</p>
+    </div>
+
+    <div class="topic" id="m4-compile">
+      <div class="topic-title">Compiling the LangGraph</div>
+      <p>Finally, we stitch the nodes together. The router sits at the <code>__start__</code> node. Based on its output, LangGraph dynamically routes execution to either <code>tool_search_docs</code>, <code>tool_search_tickets</code>, or <code>tool_summarize</code>. Once the tool finishes, all three point to <code>generate</code> to run the LLM, and then to <code>__end__</code>.</p>
+    </div>
+  </section>
+  <hr class="module-divider">
+
+  <section class="content-area" id="module5">
+    <div class="module-header" style="background:linear-gradient(135deg,rgba(168,237,171,.1),rgba(168,237,171,.03))">
+      <div class="module-num" style="background:rgba(168,237,171,.15);color:#a8edab">05</div>
+      <div>
+        <h2>Module 5: The Frontend & Deployment (app.py)</h2>
+        <p>Streamlit Execution Model, Caching, and running the Copilot locally.</p>
+      </div>
+    </div>
+
+    <div class="topic" id="m5-cache">
+      <div class="topic-title">Streamlit's Execution Model & Caching</div>
+      <p>Unlike standard web frameworks (React/Vue), Streamlit is fundamentally synchronous. Every time you type a character or click a button, Streamlit literally runs your Python script from top to bottom again.</p>
+      <p>Loading the <code>bge-small</code> embedding model, connecting to ChromaDB, and loading the NetworkX graph takes about 5 seconds. If Streamlit did this on every keystroke, the app would be unusable.</p>
+      <div class="code-wrap">
+        <div class="code-top"><div class="dots"><span></span><span></span><span></span></div><span>app.py - Caching</span></div>
+        <pre><code><span class="op">@st.cache_resource</span>
+<span class="kw">def</span> <span class="fn">get_agent</span>():
+    <span class="cm"># This heavy initialization only happens ONCE.</span>
+    <span class="cm"># On subsequent reruns, Streamlit serves the agent from RAM.</span>
+    <span class="kw">return</span> <span class="fn">build_agent</span>()
+
+agent <span class="op">=</span> <span class="fn">get_agent</span>()</code></pre>
+      </div>
+    </div>
+
+    <div class="topic" id="m5-run">
+      <div class="topic-title">Running the Masterclass Locally</div>
+      <p>Because this system is entirely private, you must act as the infrastructure provider. Here is the step-by-step to boot the brain:</p>
+      <div class="code-wrap">
+        <div class="code-top"><div class="dots"><span></span><span></span><span></span></div><span>Bash Execution</span></div>
+        <pre><code><span class="cm"># 1. Start the LLM Server (Ollama) in the background</span>
+ollama serve &
+
+<span class="cm"># 2. Download the local model (Llama 3.2 is approx 2GB)</span>
+ollama pull llama3.2
+
+<span class="cm"># 3. Compile the Knowledge (Builds Chroma, BM25, and Graph indices)</span>
+PYTHONPATH=. python3 src/ingest.py
+
+<span class="cm"># 4. Boot the Visual Interface</span>
+PYTHONPATH=. streamlit run src/app.py</code></pre>
+      </div>
+      <p>The Copilot is now listening on <code>localhost:8501</code>. No data will ever leave your machine.</p>
+    </div>
+  </section>
+  <hr class="module-divider">
+
+  <section class="content-area" id="module6">
+    <div class="module-header" style="background:linear-gradient(135deg,rgba(255,153,194,.1),rgba(255,153,194,.03))">
+      <div class="module-num" style="background:rgba(255,153,194,.15);color:#ff99c2">06</div>
+      <div>
+        <h2>Module 6: Advanced Architectural Q&A</h2>
+        <p>20 deep, real-world questions testing your understanding of edge cases and design choices.</p>
+      </div>
+    </div>
+    <div class="qa-section" id="m6-qa">
+      <h3>⭐ Deep Knowledge Database</h3>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q1: Why use BAAI/bge-small-en-v1.5 instead of OpenAI text-embedding-3? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">Privacy and Cost. BGE-small is an open-source, 33-million parameter model that runs locally on CPU in milliseconds. OpenAI requires sending sensitive internal company data (like unreleased product specs or HR complaints) to a third-party server, which violates strict Enterprise compliance rules.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q2: What happens if the query contains no entities for Graph Traversal? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">The <code>search_graph</code> function will simply return an empty list <code>[]</code>. The string <code>'None'</code> is injected into the LLM prompt for the graph section, and the LLM relies entirely on the Vector/BM25 results. This is completely safe and handled gracefully.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q3: Why hardcode the router with keywords instead of using LangChain's LLMRouter? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">A 3B parameter model like Llama-3.2 is extremely fast but highly prone to instruction-following failures on complex zero-shot classification. If we ask it to route, it might output <code>'I think this is a ticket'</code> instead of exactly <code>'tickets'</code>, which crashes the LangGraph conditional edge. Keywords guarantee 100% deterministic routing at 0 latency.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q4: How does the Faithfulness Metric handle synonyms? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">Poorly. Because it uses exact token overlap (Set Theory), if the context says 'vacation' and the LLM generates 'holiday', the overlap score decreases. This is a known limitation of exact-match metrics. However, in strict enterprise environments, a harsh penalty on hallucination is preferred over a loose metric that allows fake facts to slip through.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q5: Why not use Neo4j instead of NetworkX? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">NetworkX stores the graph in RAM and pickles it to disk. This is perfect for 100-1,000 nodes (a hackathon or small org). Neo4j is a persistent, distributed graph database required if your org chart and ticket history spans 1,000,000+ nodes. For this copilot, NetworkX minimizes deployment complexity.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q6: Can BM25 handle semantic typos? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">No. BM25 is a sparse retriever based on exact string matching. If the user searches for 'acess' instead of 'access', BM25 will yield 0 hits. This is precisely why we fuse it with Dense Vector search (which handles typos and semantic meaning beautifully) using RRF.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q7: What is Reciprocal Rank Fusion actually doing mathematically? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">It penalizes models for disagreeing and rewards consensus. The formula `1 / (60 + rank)` gives diminishing returns to the #1 spot vs the #2 spot. If a document is #1 in Vector and #100 in BM25, it might lose to a document that is #5 in Vector and #4 in BM25. It mathematically ensures we only retrieve documents that *both* systems agree are relevant.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q8: Why is the RRF constant 'k' usually set to 60? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">Based on empirical research (Cormack et al., 2009), k=60 prevents the very first rank from mathematically dominating the entire score. If k was 1, rank 1 gets score 0.5, rank 2 gets 0.33, etc. With k=60, rank 1 gets 0.0163, rank 2 gets 0.0161. The curve is smoother, forcing the algorithm to look at consensus rather than absolute peaks.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q9: Why sort spaCy NER entities by length descending? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">To prevent partial string replacement data leaks. If we have entities 'Dr. Sarah Jenkins' and 'Sarah', replacing 'Sarah' first leaves 'Dr. [REDACTED] Jenkins'. Sorting by length descending forces the system to replace the entire 'Sarah Jenkins' block first.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q10: Why chunk text at all? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">Two reasons: 1) Embedding models physically crash if you pass them more than 512 tokens. 2) The 'Lost in the Middle' phenomenon. If you embed a 10-page document into a single vector, the specific details get averaged out. Searching for a specific sentence will fail because the vector represents the 'general vibe' of the whole 10 pages.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q11: What is the sliding window overlap limit? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">We used 800 characters with a 150-character overlap. This guarantees that any sentence shorter than 150 characters will exist completely intact within at least one chunk, preventing context destruction at the chunk boundaries.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q12: Why use fitz (PyMuPDF) over PyPDF2? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">PyPDF2 is outdated, incredibly slow, and struggles with complex multi-column layouts. PyMuPDF is written in C++ and handles OCR, tables, and raw text streams accurately, which is critical for parsing enterprise PDFs without mangling the text.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q13: How does the UI know which tool was used? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">LangGraph's <code>State</code> dictionary contains a <code>tool_used</code> key. When the Router selects a path, the corresponding tool node (e.g., <code>tool_search_tickets</code>) updates the State dictionary with its name. The Streamlit UI simply reads <code>st.session_state.state['tool_used']</code> to render the badge.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q14: Is Streamlit secure for production? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">Streamlit is excellent for prototyping and internal tools, but it lacks native Enterprise SSO (SAML/OIDC). To deploy this in a real enterprise, you would either put it behind a proxy like Cloudflare Access, or rebuild the frontend in Next.js and expose the LangGraph via FastAPI.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q15: Why use Ollama? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">Ollama acts as a local OpenAI-compatible API server. It automatically handles the heavy lifting of loading GGUF model weights into your GPU (or CPU RAM) and exposes a clean REST API. This abstracts away the horrific complexity of managing PyTorch/Transformers directly.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q16: What happens if ChromaDB is empty? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">The retriever will return an empty list. The LangGraph state will pass this empty context to the LLM. Because of our strict prompt ('If the answer isn't in the context, say...'), the LLM will gracefully tell the user that the internal docs don't contain the answer, avoiding a hallucination.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q17: Can I add my own JIRA data to this? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">Absolutely. You just need to create a new loader in <code>ingest.py</code> that hits the JIRA API, extracts the issue descriptions and comments, structures them as a string, and passes them to <code>chunk_text()</code>. The vector engine will handle the rest.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q18: Why does Streamlit use @st.cache_resource instead of @st.cache_data? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a"><code>@st.cache_data</code> is for serializable data (like pandas dataframes). It literally copies the data. <code>@st.cache_resource</code> is for un-serializable objects like Database Connections or AI Models. If you try to <code>cache_data</code> an embedding model, Streamlit will crash with a PicklingError.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q19: What is the difference between Successors and Predecessors in NetworkX? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">In a Directed Graph, A -> B means A manages B. A is the predecessor, B is the successor. If you query 'Who does B manage?', you look at B's successors. If you query 'Who manages B?', you look at B's predecessors. You must check both to get the full relational picture.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)">Q20: How can we improve the keyword router? <span class="qa-arrow">▼</span></div>
+        <div class="qa-a">If the keyword router becomes too complex to manage via <code>if/elif</code>, you can upgrade to a fast intent-classification model (like a fine-tuned DistilBERT or SetFit) that runs in 10ms and classifies queries into 'Docs' vs 'Tickets' with 99% accuracy without full LLM overhead.</div>
+      </div>
+</div></section>
+  <section class="content-area" id="module7">
+    <div class="module-header" style="background:linear-gradient(135deg,rgba(74,222,128,.1),rgba(74,222,128,.03))">
+      <div class="module-num" style="background:rgba(74,222,128,.15);color:#4ade80">07</div>
+      <div>
+        <h2>Module 7: Productionizing to Enterprise Scale</h2>
+        <p>How to take this local prototype to a massive, scalable enterprise architecture.</p>
+      </div>
+    </div>
+
+    <div class="topic" id="m7-scale">
+      <div class="topic-title">Scaling the Architecture</div>
+      <p>This Copilot is a masterpiece of local, privacy-first engineering. However, if the company grows from 100 documents to 10,000,000 documents, the current tech stack will buckle. Here is the upgrade path:</p>
+      
+      <ul>
+        <li><strong>From ChromaDB to Qdrant/Milvus:</strong> ChromaDB running locally on SQLite is great for under 100k vectors. For millions, you need a distributed vector database like Qdrant or Milvus that runs on a dedicated Kubernetes cluster with High Availability.</li>
+        <li><strong>From <code>rank_bm25</code> to Elasticsearch:</strong> Storing BM25 arrays in a Pickle file is a security risk and uses too much RAM. You must migrate the Keyword Search engine to an Elasticsearch cluster.</li>
+        <li><strong>From NetworkX to Neo4j:</strong> NetworkX is an in-memory graph. For a real enterprise, relationships should be persisted in Neo4j, which supports the Cypher query language and scales across multiple nodes.</li>
+        <li><strong>From Streamlit to React+FastAPI:</strong> Streamlit's synchronous execution model is terrible for concurrent users. The frontend must be rewritten in React/Next.js, communicating via WebSockets or SSE (Server-Sent Events) to a FastAPI backend that hosts the LangGraph agent.</li>
+        <li><strong>From Ollama to vLLM:</strong> Ollama is fantastic for local development. In production, <code>vLLM</code> offers massive throughput improvements (via PagedAttention) for serving Llama models to hundreds of concurrent users on A100 GPUs.</li>
+      </ul>
+      
+      <div class="callout tip">
+        <strong>The Core Logic Remains the Same</strong><br>
+        Even if you replace every single database in this stack, the <strong>Agentic Logic</strong>, the <strong>RRF Math</strong>, and the <strong>Faithfulness Check</strong> remain mathematically identical. You have built the permanent core of an enterprise AI brain.
+      </div>
+    </div>
+  </section>
+
+</main>
+<script>
+  function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+  function toggleNav(num) { document.getElementById('nsub'+num).classList.toggle('open'); }
+  function toggleQA(element) {
+    element.classList.toggle('open');
+    element.nextElementSibling.classList.toggle('open');
+  }
+  window.addEventListener('scroll', () => {
+    let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+    let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    document.getElementById('progress-fill').style.width = ((winScroll / height) * 100) + '%';
+  });
+</script>
+</body>
+</html>

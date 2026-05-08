@@ -1,0 +1,434 @@
+================================================================================
+NEXACORP INTERNAL EMPLOYEE HANDBOOK & IT POLICY COMPENDIUM
+Version 4.7 | Effective Date: January 1, 2024 | Confidential — Internal Use Only
+================================================================================
+
+FOREWORD FROM THE CTO
+----------------------
+Welcome to NexaCorp. This handbook is the definitive reference for all technology, HR, security, and operational policies governing NexaCorp's internal workforce and IT infrastructure. All employees are expected to read, understand, and comply with every policy contained herein. Questions regarding interpretation should be directed to IT Security Head Priya Nair at p.nair@nexacorp.com or by phone at +1-312-555-0194. For HR-related queries, contact HR Director Lena Kovacs at l.kovacs@nexacorp.com or call +1-312-555-0271. This handbook supersedes all previous versions.
+
+— Anita Sharma, Chief Technology Officer, NexaCorp Global
+
+================================================================================
+SECTION 1: ORGANIZATIONAL STRUCTURE AND CONTACT DIRECTORY
+================================================================================
+
+1.1 EXECUTIVE LEADERSHIP
+-------------------------
+NexaCorp is led by a cross-functional executive team responsible for all strategic technology and operations decisions. The CTO, Anita Sharma, oversees all engineering, infrastructure, and product delivery units. The VP of Infrastructure, Sarah Jenkins, reports directly to the CTO and is responsible for the stability, availability, and performance of all production and development infrastructure. Sarah Jenkins can be reached at sarah.j@nexacorp.com or in emergency situations via her direct line at +1-312-555-0188. The Compliance Officer, Simone Reyes, oversees all regulatory, audit, and data governance activities and reports jointly to the CTO and the General Counsel.
+
+1.2 DEPARTMENT HEADS AND SYSTEM OWNERS
+----------------------------------------
+Each major IT system at NexaCorp is assigned a designated System Owner who bears accountability for uptime SLAs, patching schedules, access reviews, and incident escalations. The following is the authoritative list of system owners as of the current handbook version:
+
+- NEXACORE-DB (Primary Oracle Database Cluster): Owned by Database Administrator Derek Walsh. Derek is responsible for all schema changes, backup verification, query performance tuning, and major incident coordination related to database availability. Derek's after-hours escalation contact is maintained in the on-call rotation system under the handle @dwalsh-oncall.
+
+- AUTH-GATEWAY (Single Sign-On and Authentication Gateway): Owned by Senior SysAdmin Marcus Thompson. Marcus manages all authentication tokens, certificate renewals, OAuth2 integrations, and MFA policy enforcement. Any authentication anomalies or lockouts affecting more than five concurrent users must be escalated to Marcus Thompson at m.thompson@nexacorp.com immediately.
+
+- NEXAVPN (Corporate VPN Infrastructure): Jointly owned by Network Engineer Jordan Okafor and Marcus Thompson. Jordan handles all routing, tunneling protocol configurations, and certificate provisioning for remote access. Jordan Okafor can be reached at j.okafor@nexacorp.com.
+
+- CLOUDSYNC-S3 (Cloud Storage Synchronization Layer): Owned by Cloud Architect Chloe Fontaine. This system manages bidirectional synchronization between NexaCorp's on-premise NAS infrastructure and AWS S3 buckets. Chloe Fontaine holds admin credentials and coordinates with AWS Technical Account Managers for capacity and billing escalations.
+
+- NEXAMAIL (Corporate Email and Relay Infrastructure): Owned by Marcus Thompson. This includes the Postfix relay cluster, Microsoft Exchange hybrid connector, anti-spam filtering, and SPF/DKIM/DMARC enforcement. Mail delivery failures impacting more than ten users simultaneously are classified as P1 incidents.
+
+- BUILDPIPE-CI (Continuous Integration and Delivery Pipeline): Owned by DevOps Engineer Nathan Xu. Nathan oversees all Jenkins and GitHub Actions pipelines, Docker registry management, artifact versioning, and deployment gating policies. Nathan Xu can be reached at n.xu@nexacorp.com.
+
+- NEXASEC-FW (Perimeter Firewall and IDS/IPS Cluster): Owned by Security Analyst Oliver Pine and supervised by Priya Nair. Oliver Pine manages all ingress and egress firewall rules, maintains the Snort IDS signature database, and generates quarterly security posture reports.
+
+- HRPORTAL (Human Resources Self-Service Portal): Owned by Help Desk Lead Tomas Brewer in coordination with Lena Kovacs. The HRPORTAL is an internal Workday-integrated application that allows employees to manage leave requests, payslip downloads, benefits enrollment, and performance review submissions.
+
+- MONITORX (Infrastructure Monitoring and Alerting Platform): Owned by Nathan Xu and Jordan Okafor jointly. MONITORX is a Prometheus/Grafana stack that aggregates metrics from all production systems. All threshold-breach alerts are routed to PagerDuty, which triggers the on-call rotation.
+
+- NEXABACKUP (Centralized Backup and Disaster Recovery System): Owned by Senior DBA Farida Hassan. Farida is responsible for daily, weekly, and monthly backup job execution verification, offsite tape rotation, and quarterly restore drills. Farida Hassan reports to Derek Walsh for operational matters and to Simone Reyes for compliance matters.
+
+- APIGATEWAY-V2 (Public-Facing API Gateway): Owned by Raj Patel under the mentorship of Chloe Fontaine. This Kong-based gateway manages rate limiting, JWT validation, API versioning, and developer portal access for all external-facing NexaCorp APIs.
+
+- TICKETSYS (Internal IT Ticketing and Workflow System): Owned by Tomas Brewer. This Jira-based system is the single pane of glass for all IT incident, service request, change, and problem management workflows.
+
+1.3 MANAGEMENT HIERARCHY
+--------------------------
+The following reporting chain is in effect: Anita Sharma (CTO) manages Sarah Jenkins (VP Infrastructure). Sarah Jenkins manages Marcus Thompson (Senior SysAdmin), Jordan Okafor (Network Engineer), and Kevin Marsh (IT Manager). Kevin Marsh manages Tomas Brewer (Help Desk Lead), Oliver Pine (Security Analyst), and Raj Patel (Junior Developer). Priya Nair (Head of IT Security) reports directly to Anita Sharma and operates as a horizontal authority across all system owners for security matters. Lena Kovacs (HR Director) is a peer of Sarah Jenkins and also reports to Anita Sharma. Derek Walsh (Database Administrator) and Farida Hassan (Senior DBA) report to Sarah Jenkins. Chloe Fontaine (Cloud Architect) and Nathan Xu (DevOps Engineer) report to Sarah Jenkins. Simone Reyes (Compliance Officer) reports to Anita Sharma.
+
+================================================================================
+SECTION 2: REMOTE WORK POLICY
+================================================================================
+
+2.1 ELIGIBILITY AND AUTHORIZATION
+-----------------------------------
+All full-time NexaCorp employees are eligible for a hybrid remote work arrangement of up to three days per week, subject to manager approval and role-based access classification. Employees in roles classified as "Critical Infrastructure" — which includes all System Owners listed in Section 1.2 — are required to be physically present in the primary data center office on any day that a planned maintenance window or P1 incident is active, regardless of their standard remote schedule.
+
+Remote work must be performed over the NexaCorp NEXAVPN client (version 3.4.1 or above). Connecting to any NexaCorp internal resource including the NEXACORE-DB, HRPORTAL, BUILDPIPE-CI, or APIGATEWAY-V2 from an unencrypted or non-VPN connection is a Category 2 Security Violation and will result in immediate access suspension pending a review by Priya Nair. The NEXAVPN client must be authenticated via the AUTH-GATEWAY MFA prompt using a registered hardware token (YubiKey 5 Series) or an approved mobile authenticator application.
+
+2.2 HOME NETWORK SECURITY REQUIREMENTS
+----------------------------------------
+Employees working remotely must ensure their home network meets the following minimum security standards: WPA2 or WPA3 encryption on the wireless network, a router firmware version not older than 18 months from the manufacturer's latest release, and no use of public or shared Wi-Fi without an active NexaCorp NEXAVPN tunnel. NexaCorp IT Security, under Priya Nair's directorate, conducts random endpoint compliance scans on remote devices every 30 days using the NEXASEC-FW integrated endpoint agent. Failures detected during these scans are automatically logged in TICKETSYS and assigned to Kevin Marsh for remediation follow-up.
+
+2.3 REMOTE WORK HARDWARE PROVISIONING
+---------------------------------------
+All hardware used for remote work must be NexaCorp-issued and enrolled in the Mobile Device Management (MDM) system. Employees who require additional peripherals — monitors, keyboards, docking stations, webcams — must submit a Hardware Procurement Request through the HRPORTAL under the "IT Equipment" service category. Hardware requests up to a value of USD 500 are approved by Kevin Marsh. Requests between USD 500 and USD 2,500 require additional approval from Sarah Jenkins. Any procurement exceeding USD 2,500 must be approved by Anita Sharma and reviewed by Simone Reyes for budgetary compliance.
+
+2.4 INCIDENT RESPONSE DURING REMOTE WORK
+------------------------------------------
+If a remote employee encounters a suspected security incident — including unusual login activity, unexpected MFA prompts, suspected phishing, or malware indicators — they must immediately disconnect their device from all networks and call the Security Hotline at +1-312-555-0194 (Priya Nair's direct line). Do not attempt to remediate malware independently. Do not send details of suspected incidents via personal email or messaging applications. The official incident reporting channel is TICKETSYS, using the "Security Incident" ticket template, which routes directly to Oliver Pine and Priya Nair for triage.
+
+================================================================================
+SECTION 3: SERVER ESCALATION AND INCIDENT MANAGEMENT POLICY
+================================================================================
+
+3.1 INCIDENT SEVERITY CLASSIFICATION
+--------------------------------------
+NexaCorp follows a four-tier incident severity model:
+
+Priority 1 (P1) — Critical: Complete outage of a production system or security breach. Examples include NEXACORE-DB total unavailability, AUTH-GATEWAY complete failure (no users can authenticate), or a confirmed unauthorized intrusion through NEXASEC-FW. P1 incidents must be acknowledged within 15 minutes of detection and resolved or mitigated within 4 hours. P1 escalation immediately involves Sarah Jenkins, Priya Nair, and the relevant System Owner.
+
+Priority 2 (P2) — High: Significant degradation of a production service affecting more than 20% of users. Examples include NEXAVPN latency exceeding 500ms for a sustained period, BUILDPIPE-CI pipeline failures blocking all deployments, or NEXAMAIL relay queue depth exceeding 10,000 messages. P2 incidents must be acknowledged within 30 minutes and resolved within 8 hours.
+
+Priority 3 (P3) — Medium: Non-critical service degradation affecting fewer than 20% of users or a single department. Examples include HRPORTAL session timeouts, APIGATEWAY-V2 rate limiting misconfigurations affecting a single API consumer, or CLOUDSYNC-S3 synchronization lag exceeding 60 minutes.
+
+Priority 4 (P4) — Low: Minor issues, informational alerts, or user-reported cosmetic bugs. Examples include MONITORX dashboard display errors, non-urgent hardware replacements, or password reset requests.
+
+3.2 ESCALATION PATHS BY SYSTEM
+---------------------------------
+AUTH-GATEWAY incidents (error codes beginning with ERR-AUTH-*): Primary contact is Marcus Thompson. If Marcus is unavailable within 15 minutes on a P1, escalate to Sarah Jenkins at sarah.j@nexacorp.com or +1-312-555-0188.
+
+NEXACORE-DB incidents (error codes beginning with DB-*): Primary contact is Derek Walsh. Secondary is Farida Hassan. If both are unavailable on a P1, contact Sarah Jenkins directly.
+
+NEXAVPN incidents (error codes beginning with VPN-*): Primary contact is Jordan Okafor. Secondary is Marcus Thompson.
+
+CLOUDSYNC-S3 incidents (error codes beginning with SYNC-*): Primary contact is Chloe Fontaine. No secondary defined; escalate to Sarah Jenkins on P1.
+
+NEXAMAIL incidents (error codes beginning with MAIL-*): Primary contact is Marcus Thompson. Secondary is Nathan Xu for relay infrastructure issues.
+
+BUILDPIPE-CI incidents (error codes beginning with BUILD-*): Primary contact is Nathan Xu. Secondary is Kevin Marsh.
+
+NEXASEC-FW incidents (error codes beginning with FW-*): Primary contact is Oliver Pine. Secondary is Priya Nair, who must be informed of all FW-related P1 and P2 incidents regardless of resolution status.
+
+HRPORTAL incidents (error codes beginning with HR-*): Primary contact is Tomas Brewer. Secondary is Lena Kovacs for data-related issues.
+
+MONITORX incidents (error codes beginning with MONITOR-*): Primary contact is Nathan Xu. Secondary is Jordan Okafor.
+
+NEXABACKUP incidents (error codes beginning with BACKUP-*): Primary contact is Farida Hassan. Secondary is Derek Walsh.
+
+APIGATEWAY-V2 incidents (error codes beginning with API-*): Primary contact is Raj Patel. Secondary is Chloe Fontaine.
+
+3.3 ON-CALL ROTATION POLICY
+------------------------------
+NexaCorp maintains a 24/7 on-call rotation for P1 and P2 incidents. The rotation is managed through PagerDuty and is overseen by Kevin Marsh. The weekly on-call schedule is published every Friday by 17:00 CST to the internal MONITORX dashboard and via NEXAMAIL distribution list "oncall-schedule@nexacorp.com". Each on-call engineer is expected to respond to PagerDuty alerts within 10 minutes. If no response is received within 10 minutes, the alert escalates to Sarah Jenkins automatically. Engineers who miss more than two on-call acknowledgements in a calendar quarter must attend a remediation session with Kevin Marsh.
+
+3.4 CHANGE MANAGEMENT AND MAINTENANCE WINDOWS
+------------------------------------------------
+All changes to production systems — including firewall rule modifications in NEXASEC-FW, schema migrations in NEXACORE-DB, certificate rotations on AUTH-GATEWAY or NEXAVPN, and deployment approvals through BUILDPIPE-CI — must be submitted as Change Requests in TICKETSYS at least 72 hours in advance of the planned execution time. Emergency changes (required within less than 72 hours due to security patches or active incident mitigation) require verbal approval from Sarah Jenkins and Priya Nair, followed by a retroactive TICKETSYS Change Request within 24 hours.
+
+Standard maintenance windows are Saturday 02:00–06:00 CST and Sunday 02:00–04:00 CST. Changes outside these windows require explicit P1 justification documented in the TICKETSYS Change Record by the System Owner.
+
+3.5 POST-INCIDENT REVIEW
+--------------------------
+All P1 and P2 incidents must be followed by a Post-Incident Review (PIR) document within 5 business days of resolution. The PIR must be authored by the Primary System Owner and reviewed and countersigned by Sarah Jenkins and Priya Nair. PIR documents are stored in the CLOUDSYNC-S3 bucket "nexacorp-pir-archive" and indexed in TICKETSYS under the originating incident ticket. Failure to file a PIR within the 5-day window results in an automatic P3 compliance ticket assigned to Simone Reyes for follow-up with the responsible system owner.
+
+================================================================================
+SECTION 4: HARDWARE PROCUREMENT POLICY
+================================================================================
+
+4.1 STANDARD HARDWARE CATALOG
+--------------------------------
+NexaCorp maintains an approved hardware catalog managed by Kevin Marsh. All procurement must be sourced from this catalog unless a formal exception is approved. The catalog includes:
+
+Laptops: Dell XPS 15 (Developer Standard), Lenovo ThinkPad T16 (Operations Standard), Apple MacBook Pro M3 (Design/Executive Tier). All laptops must be enrolled in NexaCorp MDM within 24 hours of receipt.
+
+Servers: Dell PowerEdge R750 (standard rack server), HPE ProLiant DL380 Gen10 (high-memory database workloads), Cisco UCS B-Series blades (high-density compute). All server provisioning requests must be submitted by the requesting System Owner and approved by both Sarah Jenkins and Derek Walsh for database-tier servers or Sarah Jenkins and Nathan Xu for application-tier servers.
+
+Networking: Cisco Catalyst 9300 series switches, Palo Alto PA-5200 series firewalls (managed under NEXASEC-FW policy by Oliver Pine), Fortinet FortiGate 600E for branch office deployments.
+
+Storage: NetApp AFF A400 arrays (primary), Pure Storage FlashArray//X (secondary high-IOPS), AWS S3 (cloud tier, managed via CLOUDSYNC-S3 by Chloe Fontaine).
+
+4.2 PROCUREMENT WORKFLOW
+--------------------------
+Step 1: Employee submits a Hardware Procurement Request in HRPORTAL, specifying the catalog item, business justification, and cost center code.
+Step 2: Request is routed to Kevin Marsh for initial review and budget check.
+Step 3: Requests above USD 500 are auto-escalated to Sarah Jenkins. Requests above USD 2,500 are further escalated to Anita Sharma.
+Step 4: Upon approval, the request is forwarded to the NexaCorp Procurement team, who sources from preferred vendors within 3–5 business days.
+Step 5: Upon receipt, IT Help Desk (Tomas Brewer) coordinates unboxing, asset tagging, MDM enrollment, and delivery to the requesting employee.
+Step 6: Farida Hassan maintains the Asset Register in NEXACORE-DB schema "ASSET_MGMT" and must be notified of all new asset additions within 24 hours of delivery.
+
+4.3 HARDWARE DISPOSAL AND DECOMMISSIONING
+-------------------------------------------
+All hardware being decommissioned must be processed through the NexaCorp Secure Disposal Program. Hard drives and SSDs must be wiped using DoD 5220.22-M 3-pass overwrite, certified by Oliver Pine or a designate from the security team. Physical destruction certificates must be obtained for storage media that cannot be wiped due to failure. Disposal certificates are archived by Simone Reyes in the compliance document repository.
+
+================================================================================
+SECTION 5: DATA CLASSIFICATION AND HANDLING POLICY
+================================================================================
+
+5.1 DATA CLASSIFICATION TIERS
+--------------------------------
+NexaCorp classifies all data into four tiers:
+
+Tier 1 — Public: Information approved for public release. No access controls required beyond standard authentication.
+Tier 2 — Internal: General business data for use by all employees. Must not be shared with external parties without approval from Simone Reyes.
+Tier 3 — Confidential: Sensitive business data including financial records, HR data, client contracts, and security configurations. Access is role-based and audited quarterly by Priya Nair. Tier 3 data must be encrypted at rest (AES-256) and in transit (TLS 1.2 minimum).
+Tier 4 — Restricted: Highly sensitive data including PII, credentials, cryptographic keys, and regulatory audit records. Access requires multi-factor authentication via AUTH-GATEWAY and explicit approval from Priya Nair. All access to Tier 4 data is logged in MONITORX with 90-day retention.
+
+5.2 PERSONALLY IDENTIFIABLE INFORMATION (PII) HANDLING
+---------------------------------------------------------
+NexaCorp collects, processes, and stores PII as defined under GDPR, CCPA, and applicable regional regulations. All PII — including employee names, email addresses, phone numbers, national identification numbers, health records, and financial data — is classified as Tier 4 Restricted. PII stored in NEXACORE-DB is encrypted using column-level encryption managed by Farida Hassan. PII in HRPORTAL is subject to Workday's data processing agreement and reviewed annually by Lena Kovacs and Simone Reyes. Any suspected PII breach must be reported to Priya Nair at p.nair@nexacorp.com or +1-312-555-0194 within 1 hour of discovery. NexaCorp's regulatory obligation requires notification to supervisory authorities within 72 hours of confirming a PII breach.
+
+5.3 DATA RETENTION AND DELETION
+---------------------------------
+Operational logs from MONITORX, NEXASEC-FW, AUTH-GATEWAY, and BUILDPIPE-CI are retained for 90 days in hot storage and 365 days in NEXABACKUP cold storage. NEXACORE-DB transactional data is retained per contractual and regulatory requirements, with a default retention period of 7 years unless a customer data deletion request is received. HR data in HRPORTAL is retained for the duration of employment plus 5 years, as required by applicable labor regulations. Farida Hassan and Simone Reyes jointly review and execute data deletion schedules on a quarterly basis. All deletion activities are logged in TICKETSYS under "Data Governance" category.
+
+================================================================================
+SECTION 6: NETWORK ACCESS AND VPN POLICY
+================================================================================
+
+6.1 NEXAVPN CLIENT INSTALLATION AND CONFIGURATION
+---------------------------------------------------
+The official NEXAVPN client (Cisco AnyConnect 4.10.x) is distributed via the HRPORTAL IT Downloads section. Employees must not install VPN clients from any other source. Configuration profiles are pre-signed and managed by Jordan Okafor. If a VPN certificate expires, employees will receive error code VPN-CERT-7731. Resolution requires submitting a TICKETSYS P3 ticket tagged "VPN-CERT" and assigned to Jordan Okafor. Certificate re-issuance typically takes 30 minutes during business hours.
+
+6.2 NETWORK SEGMENTATION
+--------------------------
+NexaCorp's network is segmented into the following zones, enforced by NEXASEC-FW under Oliver Pine's management:
+- ZONE-PROD: Production servers including NEXACORE-DB and AUTH-GATEWAY nodes. Access restricted to System Owners and Senior Staff.
+- ZONE-DEV: Development and staging environments. Accessible to all engineering employees via NEXAVPN.
+- ZONE-DMZ: Demilitarized zone for internet-facing services including APIGATEWAY-V2.
+- ZONE-CORP: Corporate network for HRPORTAL, NEXAMAIL, and TICKETSYS.
+- ZONE-MGMT: Out-of-band management network for server consoles and MONITORX. Accessible only to Marcus Thompson, Jordan Okafor, Nathan Xu, and Oliver Pine.
+
+6.3 FIREWALL RULE CHANGE REQUESTS
+------------------------------------
+All requests to add, modify, or remove firewall rules in NEXASEC-FW must be submitted as a TICKETSYS Change Request with the "FW-RULE-CHANGE" label. Requests must include: the source IP or CIDR, destination IP or CIDR, port and protocol, business justification, risk rating (as assessed by the requester), and duration (permanent or time-bound). Oliver Pine reviews all rule change requests within 24 hours. Rules assessed as high-risk (e.g., opening inbound ports below 1024, enabling any-source access to ZONE-PROD) require additional approval from Priya Nair. All firewall rule changes are logged in NEXASEC-FW syslog and replicated to MONITORX for audit visibility.
+
+================================================================================
+SECTION 7: INFORMATION SECURITY POLICY
+================================================================================
+
+7.1 PASSWORD AND CREDENTIAL MANAGEMENT
+-----------------------------------------
+All NexaCorp employees must use the enterprise password manager (HashiCorp Vault, managed by Priya Nair) for storing system credentials, API keys, and service account passwords. Personal credentials must not be stored in plain text, in code repositories, or in shared drives. Password complexity requirements: minimum 16 characters, at least one uppercase, one lowercase, one digit, and one special character. Passwords must not be reused within the last 24 password cycles. Service accounts in NEXACORE-DB and AUTH-GATEWAY must have passwords rotated every 90 days, enforced automatically by Marcus Thompson's AUTH-GATEWAY rotation scripts.
+
+7.2 MULTI-FACTOR AUTHENTICATION
+---------------------------------
+MFA is mandatory for all NexaCorp systems accessed via AUTH-GATEWAY. Supported MFA methods include YubiKey 5 (preferred), Duo Mobile, and Google Authenticator. SMS-based OTP is explicitly prohibited as a sole MFA factor due to SIM-swapping risk. Any authentication failure generating error code ERR-AUTH-9092 indicates an expired or revoked MFA token and must be resolved by contacting Marcus Thompson. Error code ERR-AUTH-8801 indicates a certificate mismatch on the AUTH-GATEWAY and must be escalated directly to Marcus Thompson as a P2 incident.
+
+7.3 SECURITY AWARENESS TRAINING
+---------------------------------
+All NexaCorp employees must complete annual mandatory security awareness training modules hosted on the HRPORTAL LMS. Training topics include phishing recognition, secure remote work practices, data classification, and incident reporting. Completion is tracked by Tomas Brewer and non-compliance is reported to Lena Kovacs and Kevin Marsh. Employees who fail to complete training within the mandated window have their NEXAVPN and HRPORTAL access suspended by Priya Nair until the training is completed.
+
+7.4 PENETRATION TESTING AND VULNERABILITY MANAGEMENT
+------------------------------------------------------
+NexaCorp conducts quarterly external penetration tests performed by an approved third-party vendor, coordinated by Priya Nair and Oliver Pine. Internal vulnerability scans are run weekly against ZONE-PROD, ZONE-DMZ, and ZONE-CORP using Tenable Nessus, managed by Oliver Pine. Critical and High severity findings must be remediated within 30 days and 60 days, respectively. All findings are tracked in TICKETSYS under "Vulnerability Management" category, with remediation ownership assigned to the relevant System Owner.
+
+================================================================================
+SECTION 8: DATABASE ACCESS AND QUERY POLICY
+================================================================================
+
+8.1 NEXACORE-DB ACCESS GOVERNANCE
+------------------------------------
+Access to NEXACORE-DB is strictly controlled and governed by a Role-Based Access Control (RBAC) model maintained by Derek Walsh. There are four defined database roles:
+
+DBA_ADMIN: Full DDL and DML access. Assigned only to Derek Walsh and Farida Hassan.
+DBA_READ_WRITE: DML access to specific schemas. Assigned to application service accounts and Raj Patel for development schema.
+DBA_READ_ONLY: SELECT-only access to non-PII schemas. Assigned to analytics and reporting service accounts.
+DBA_AUDIT: Access to audit log tables only. Assigned to Simone Reyes for compliance queries.
+
+All access provisioning requests must be submitted in TICKETSYS and approved by both Derek Walsh and Priya Nair. Access is reviewed quarterly; unused accounts are disabled automatically after 45 days of inactivity by Farida Hassan's automated cleanup scripts.
+
+8.2 QUERY PERFORMANCE AND TIMEOUT POLICY
+------------------------------------------
+Queries executing for more than 300 seconds are automatically terminated by NEXACORE-DB's Oracle Resource Manager. This generates error code DB-TIMEOUT-404X in the application log and must be investigated by Derek Walsh or Farida Hassan. Long-running queries that are business-critical can be temporarily whitelisted for up to 7 days by Derek Walsh, with notification to Sarah Jenkins. Error code DB-LOCK-1192X indicates a deadlock condition and triggers an automated alert to Derek Walsh via MONITORX/PagerDuty. Error code DB-CONN-POOL-99 indicates connection pool exhaustion and must be resolved within 30 minutes as it typically escalates to a P1 incident if not mitigated.
+
+8.3 BACKUP AND RECOVERY PROCEDURES
+-------------------------------------
+NEXACORE-DB is backed up under the following schedule managed by Farida Hassan:
+- Full backup: Every Sunday at 01:00 CST, stored locally and replicated to NEXABACKUP cold storage.
+- Incremental backup: Daily Monday–Saturday at 01:00 CST.
+- Redo log archiving: Continuous, with 30-minute flush cycles.
+
+Recovery Time Objective (RTO) for NEXACORE-DB: 4 hours. Recovery Point Objective (RPO): 30 minutes. Any backup failure generates error code BACKUP-CHKSUM-77Z, which alerts Farida Hassan via MONITORX. If two consecutive backups fail, a P2 incident is automatically created in TICKETSYS. Quarterly restore drills must be documented and countersigned by Derek Walsh and Simone Reyes.
+
+================================================================================
+SECTION 9: CLOUD INFRASTRUCTURE AND CLOUDSYNC-S3 POLICY
+================================================================================
+
+9.1 CLOUD RESOURCE GOVERNANCE
+--------------------------------
+All NexaCorp cloud resources are hosted in AWS and managed under the "nexacorp-prod" and "nexacorp-dev" AWS Organizations accounts. Chloe Fontaine is the designated Cloud Architect and holds Org Admin credentials. IAM user creation in any AWS account requires a TICKETSYS service request approved by Chloe Fontaine and Priya Nair. Root account usage is prohibited outside of break-glass emergency scenarios and must be reported to Priya Nair within 1 hour.
+
+9.2 CLOUDSYNC-S3 OPERATION
+-----------------------------
+The CLOUDSYNC-S3 system synchronizes NexaCorp on-premise file shares to AWS S3 on a 15-minute schedule. Synchronization failures generate the following error codes:
+- SYNC-FAIL-2201B: General sync failure; indicates network or credential issue.
+- SYNC-DELTA-441C: Delta computation failure; indicates a corrupted manifest file.
+- SYNC-HASH-773B: Hash verification failure; indicates file corruption during transfer.
+
+Error SYNC-FAIL-2201B must be resolved by Chloe Fontaine within 2 hours as prolonged sync failure can result in data loss exposure. All SYNC errors are monitored in MONITORX and alert Chloe Fontaine via PagerDuty.
+
+9.3 COST MANAGEMENT AND TAGGING POLICY
+----------------------------------------
+All AWS resources must be tagged with the following mandatory tags: "CostCenter", "SystemOwner", "Environment" (prod/dev/staging), and "DataClassification". Untagged resources discovered during monthly AWS Config scans trigger a TICKETSYS P4 ticket assigned to the suspected owner. Resources untagged for more than 14 days are eligible for automatic termination after a 48-hour grace period notification, per Chloe Fontaine's cloud hygiene automation.
+
+================================================================================
+SECTION 10: HR AND EMPLOYEE LIFECYCLE POLICIES
+================================================================================
+
+10.1 ONBOARDING
+-----------------
+New employee onboarding is coordinated by Lena Kovacs (HR) and Tomas Brewer (Help Desk). Within 24 hours of a new employee's start date, Tomas Brewer must provision: AUTH-GATEWAY user account, NEXAVPN client installation and profile, HRPORTAL access, NEXAMAIL mailbox, and TICKETSYS user account. System-specific access (NEXACORE-DB, BUILDPIPE-CI, CLOUDSYNC-S3, etc.) is provisioned separately based on role and approved by the relevant System Owner. All access provisioning activities are logged under the onboarding ticket in TICKETSYS created by Lena Kovacs.
+
+10.2 OFFBOARDING
+------------------
+When an employee leaves NexaCorp — whether voluntarily or involuntarily — Lena Kovacs initiates an offboarding workflow in HRPORTAL, which automatically triggers a TICKETSYS offboarding checklist assigned to Tomas Brewer. The checklist requires Tomas Brewer to complete the following within 24 hours of the employee's last working day: revocation of AUTH-GATEWAY credentials, NEXAVPN certificate revocation, NEXAMAIL mailbox deactivation, and HRPORTAL access removal. System-specific access revocation (NEXACORE-DB, BUILDPIPE-CI, AWS IAM) must be completed within 24 hours by the relevant System Owners and confirmed in TICKETSYS. Priya Nair conducts a final access audit within 5 business days of offboarding to confirm complete access removal.
+
+10.3 PERFORMANCE REVIEW PROCESS
+---------------------------------
+NexaCorp conducts bi-annual performance reviews in June and December. Reviews are administered through the HRPORTAL performance management module. Employees complete a self-assessment, followed by manager assessment, and a calibration session overseen by Lena Kovacs. Rating scales and compensation adjustment guidelines are Tier 3 Confidential and accessible only to managers and HR. Technical performance assessments for infrastructure roles are reviewed by Sarah Jenkins. For engineering roles, Nathan Xu and Chloe Fontaine provide technical input to Kevin Marsh's assessments for their direct reports.
+
+10.4 LEAVE AND ATTENDANCE POLICY
+----------------------------------
+Leave requests must be submitted through HRPORTAL at least 5 business days in advance for planned leave. For sick leave, employees must notify their direct manager and Tomas Brewer (Help Desk, for on-call coverage adjustments) within 1 hour of the start of the working day. On-call-eligible employees on sick leave must ensure Kevin Marsh has arranged an on-call substitute before they go offline. Extended leave of more than 5 consecutive days must be approved by Lena Kovacs.
+
+================================================================================
+SECTION 11: COMPLIANCE AND AUDIT POLICY
+================================================================================
+
+11.1 REGULATORY COMPLIANCE
+-----------------------------
+NexaCorp operates under the following regulatory frameworks: SOC 2 Type II, ISO 27001, GDPR (for EU data subjects), and CCPA (for California residents). Simone Reyes leads all external audit engagements and is the primary contact for regulatory inquiries. Annual SOC 2 audits are conducted by an approved external audit firm. All evidence collection for SOC 2 controls is coordinated by Simone Reyes with input from System Owners. Evidence packages — including access logs from AUTH-GATEWAY, change records from TICKETSYS, backup verification reports from Farida Hassan, and vulnerability scan reports from Oliver Pine — are compiled into a secure CLOUDSYNC-S3 bucket "nexacorp-audit-evidence" accessible only to Simone Reyes and Priya Nair.
+
+11.2 INTERNAL AUDIT SCHEDULE
+------------------------------
+Quarterly internal audits are conducted covering: NEXACORE-DB access review (Derek Walsh), AUTH-GATEWAY login anomaly review (Marcus Thompson), NEXASEC-FW rule review (Oliver Pine), CLOUDSYNC-S3 bucket policy review (Chloe Fontaine), NEXABACKUP restore verification (Farida Hassan), and HRPORTAL data integrity check (Lena Kovacs). Results are documented in TICKETSYS under "Internal Audit" and reviewed by Simone Reyes within 10 business days of each quarter end.
+
+11.3 POLICY EXCEPTIONS
+------------------------
+Policy exceptions must be submitted in writing to both Priya Nair and Simone Reyes, with a risk assessment and proposed compensating controls. Exceptions are valid for a maximum of 90 days and must be re-evaluated and re-approved at expiry. All active exceptions are tracked in a policy exception register maintained by Simone Reyes.
+
+================================================================================
+SECTION 12: ACCEPTABLE USE POLICY
+================================================================================
+
+12.1 CORPORATE ASSETS
+------------------------
+NexaCorp-issued hardware and software licenses are for business use. Incidental personal use is permitted provided it does not: violate any law, consume significant system resources, introduce security risk, or conflict with NexaCorp's Code of Conduct. The NEXASEC-FW deep packet inspection module (managed by Oliver Pine) monitors all traffic on the corporate network for policy violations. Employees found to be using NexaCorp systems for activities including but not limited to illegal downloads, cryptocurrency mining, accessing adult content, or intentional data exfiltration will face immediate suspension and potential termination, subject to review by Lena Kovacs and Anita Sharma.
+
+12.2 SOFTWARE INSTALLATION POLICY
+------------------------------------
+Only software from the NexaCorp approved software catalog — managed by Kevin Marsh — may be installed on NexaCorp-issued devices. Employees may not install unapproved software, browser extensions, or OS modifications. Requests to add software to the approved catalog must be submitted in TICKETSYS, reviewed by Oliver Pine for security impact, and approved by Kevin Marsh. All approved software is distributed via the BUILDPIPE-CI-integrated Endpoint Management system, which ensures software is version-locked and signed.
+
+12.3 DATA EXFILTRATION CONTROLS
+---------------------------------
+Transmission of Tier 3 or Tier 4 data to external systems — including personal email, personal cloud storage (Dropbox, Google Drive personal accounts), or USB devices — is strictly prohibited without explicit written authorization from Priya Nair and Simone Reyes. NEXASEC-FW enforces DLP (Data Loss Prevention) policies that block unauthorized transfer of patterns matching known PII formats, financial data schemas, or classified document headers. Triggered DLP events generate error code FW-DROP-3341 and alert Oliver Pine and Priya Nair immediately.
+
+================================================================================
+SECTION 13: BUILDPIPE-CI AND DEVOPS POLICY
+================================================================================
+
+13.1 PIPELINE GOVERNANCE
+--------------------------
+All code deployments to ZONE-PROD must pass through BUILDPIPE-CI. Manual deployments to production without a pipeline run are prohibited and constitute a Category 1 Security Violation. BUILDPIPE-CI is configured with the following mandatory gates: static code analysis (SonarQube), dependency vulnerability scan (Dependabot/Snyk), unit test coverage minimum 80%, integration test pass rate 100%, and manual approval gate for production deployments approved by Nathan Xu or his designate.
+
+13.2 DOCKER AND CONTAINER POLICY
+-----------------------------------
+All containerized workloads must use base images from the NexaCorp-approved Docker registry maintained by Nathan Xu. Use of public Docker Hub images in production is prohibited unless specifically approved by Priya Nair. Container images must be scanned by Trivy before registry push; images with Critical severity CVEs are blocked from being pushed. Error code BUILD-DOCKER-55X indicates a Trivy-blocked image push and requires Raj Patel (or the submitting developer) to remediate the vulnerability before re-attempting the push.
+
+13.3 SECRET MANAGEMENT IN CI/CD
+---------------------------------
+Secrets (API keys, database credentials, TLS certificates) must never be hardcoded in repository code or pipeline definitions. All secrets must be injected at runtime via HashiCorp Vault integration (managed by Priya Nair) or via BUILDPIPE-CI's native secret store (managed by Nathan Xu). Violation of this policy — including committing credentials to any NexaCorp repository — triggers an automatic TICKETSYS P1 security incident assigned to Oliver Pine and Priya Nair.
+
+================================================================================
+SECTION 14: APIGATEWAY-V2 AND DEVELOPER API POLICY
+================================================================================
+
+14.1 EXTERNAL API GOVERNANCE
+------------------------------
+All external-facing API endpoints served through APIGATEWAY-V2 must be documented in the NexaCorp Developer Portal (managed by Raj Patel) and versioned under the NexaCorp API Versioning Standard (major.minor format). API deprecation requires a minimum 6-month notice period and communication via NEXAMAIL developer newsletter.
+
+14.2 RATE LIMITING AND THROTTLING
+-----------------------------------
+APIGATEWAY-V2 enforces rate limits on all external consumers. Default limits are 1,000 requests per minute per API key. Exceeding rate limits generates error code API-RATE-4429 (HTTP 429 Too Many Requests) returned to the consumer. Requests for higher rate limit tiers must be submitted to Raj Patel, approved by Chloe Fontaine, and reviewed by Simone Reyes for data volume compliance implications.
+
+14.3 JWT VALIDATION AND API SECURITY
+--------------------------------------
+All external API requests must be authenticated using short-lived JWT tokens issued by AUTH-GATEWAY (managed by Marcus Thompson) and validated at the APIGATEWAY-V2 layer. Tokens expire after 15 minutes. Error code API-TIMEOUT-7720 indicates a token validation failure due to expiry or signature mismatch and is logged in MONITORX. Repeated API-TIMEOUT-7720 events from the same consumer key may indicate a compromised key and will trigger an automatic TICKETSYS security alert assigned to Oliver Pine.
+
+================================================================================
+APPENDIX A: SYSTEM INVENTORY AND ERROR CODE REFERENCE
+================================================================================
+
+The following is the authoritative list of all known NexaCorp system error codes for use in incident triage, TICKETSYS ticket creation, and BM25 search-indexed knowledge base retrieval:
+
+AUTH-GATEWAY ERRORS:
+- ERR-AUTH-9092: Expired or revoked MFA token. Owner: Marcus Thompson.
+- ERR-AUTH-8801: AUTH-GATEWAY certificate mismatch. Owner: Marcus Thompson. Severity: P2.
+- ERR-AUTH-0041: LDAP directory sync failure. Owner: Marcus Thompson.
+
+NEXACORE-DB ERRORS:
+- DB-TIMEOUT-404X: Oracle query execution timeout (>300s). Owner: Derek Walsh.
+- DB-LOCK-1192X: Deadlock condition detected. Owner: Derek Walsh.
+- DB-CONN-POOL-99: Connection pool exhaustion. Owner: Derek Walsh/Farida Hassan.
+
+NEXAVPN ERRORS:
+- VPN-CERT-7731: VPN client certificate expired. Owner: Jordan Okafor.
+- VPN-HANDSHAKE-003: TLS handshake failure during VPN tunnel establishment. Owner: Jordan Okafor.
+- VPN-DNS-1882: Internal DNS resolution failure over VPN tunnel. Owner: Jordan Okafor.
+
+CLOUDSYNC-S3 ERRORS:
+- SYNC-FAIL-2201B: General synchronization failure. Owner: Chloe Fontaine.
+- SYNC-DELTA-441C: Delta/manifest computation failure. Owner: Chloe Fontaine.
+- SYNC-HASH-773B: File hash verification failure. Owner: Chloe Fontaine.
+
+NEXAMAIL ERRORS:
+- MAIL-RELAY-550X: SMTP relay rejection; typically SPF/DKIM policy violation. Owner: Marcus Thompson.
+- MAIL-QUEUE-8823: Mail queue depth threshold exceeded. Owner: Marcus Thompson.
+- MAIL-SPF-4401: SPF record validation failure for outbound mail. Owner: Marcus Thompson.
+
+BUILDPIPE-CI ERRORS:
+- BUILD-PIPE-ERR-88: General pipeline execution failure. Owner: Nathan Xu.
+- BUILD-DEP-ERR-21: Dependency resolution failure during build. Owner: Nathan Xu.
+- BUILD-DOCKER-55X: Docker image Trivy security scan failure (Critical CVE). Owner: Nathan Xu/Raj Patel.
+
+NEXASEC-FW ERRORS:
+- FW-DROP-3341: DLP policy-triggered connection drop. Owner: Oliver Pine.
+- FW-RULE-9910: Firewall rule conflict or duplication detected. Owner: Oliver Pine.
+- FW-IDS-2209: IDS/IPS signature match — potential intrusion detected. Owner: Oliver Pine/Priya Nair.
+
+HRPORTAL ERRORS:
+- HR-SESSION-992: HRPORTAL session timeout due to inactivity. Owner: Tomas Brewer.
+- HR-LDAP-552: LDAP authentication failure on HRPORTAL login. Owner: Tomas Brewer/Marcus Thompson.
+- HR-SYNC-8812: Workday integration sync failure. Owner: Tomas Brewer/Lena Kovacs.
+
+MONITORX ERRORS:
+- MONITOR-ALERT-119: Custom threshold-breach alert (general). Owner: Nathan Xu.
+- MONITOR-DISK-88A: Disk utilization exceeding 85% threshold. Owner: Nathan Xu.
+
+NEXABACKUP ERRORS:
+- BACKUP-CHKSUM-77Z: Backup checksum verification failure. Owner: Farida Hassan.
+- BACKUP-ROTATE-33: Backup rotation job failure (tapes not released). Owner: Farida Hassan.
+
+APIGATEWAY-V2 ERRORS:
+- API-RATE-4429: Rate limit exceeded (HTTP 429). Owner: Raj Patel.
+- API-TIMEOUT-7720: JWT token validation failure or expiry. Owner: Raj Patel/Marcus Thompson.
+
+================================================================================
+APPENDIX B: KEY CONTACTS SUMMARY
+================================================================================
+
+Anita Sharma — CTO — anita.s@nexacorp.com
+Sarah Jenkins — VP Infrastructure — sarah.j@nexacorp.com — +1-312-555-0188
+Priya Nair — Head of IT Security — p.nair@nexacorp.com — +1-312-555-0194
+Lena Kovacs — HR Director — l.kovacs@nexacorp.com — +1-312-555-0271
+Marcus Thompson — Senior SysAdmin — m.thompson@nexacorp.com
+Derek Walsh — Database Administrator — d.walsh@nexacorp.com
+Jordan Okafor — Network Engineer — j.okafor@nexacorp.com
+Chloe Fontaine — Cloud Architect — c.fontaine@nexacorp.com
+Nathan Xu — DevOps Engineer — n.xu@nexacorp.com
+Simone Reyes — Compliance Officer — s.reyes@nexacorp.com
+Kevin Marsh — IT Manager — k.marsh@nexacorp.com
+Tomas Brewer — Help Desk Lead — t.brewer@nexacorp.com
+Raj Patel — Junior Developer — r.patel@nexacorp.com
+Farida Hassan — Senior DBA — f.hassan@nexacorp.com
+Oliver Pine — Security Analyst — o.pine@nexacorp.com
+
+================================================================================
+END OF NEXACORP EMPLOYEE HANDBOOK — VERSION 4.7
+For corrections or updates, contact Lena Kovacs at l.kovacs@nexacorp.com
+or Priya Nair at p.nair@nexacorp.com / +1-312-555-0194
+================================================================================

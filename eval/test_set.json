@@ -1,0 +1,31 @@
+[
+  {"id": 1, "type": "error_code", "question": "What is error code ERR-AUTH-9092?", "expected_answer": "Expired or revoked MFA token", "source": "nexacorp_handbook.txt", "expected_entities": ["ERR-AUTH-9092", "AUTH-GATEWAY"]},
+  {"id": 2, "type": "error_code", "question": "What does DB-TIMEOUT-404X mean?", "expected_answer": "Oracle query execution timeout exceeding 300 seconds", "source": "nexacorp_handbook.txt", "expected_entities": ["DB-TIMEOUT-404X", "NEXACORE-DB"]},
+  {"id": 3, "type": "error_code", "question": "What triggers error code FW-DROP-3341?", "expected_answer": "DLP policy triggered connection drop", "source": "nexacorp_handbook.txt", "expected_entities": ["FW-DROP-3341", "NEXASEC-FW"]},
+  {"id": 4, "type": "error_code", "question": "What is VPN-CERT-7731?", "expected_answer": "VPN client certificate expired", "source": "nexacorp_handbook.txt", "expected_entities": ["VPN-CERT-7731", "NEXAVPN"]},
+  {"id": 5, "type": "error_code", "question": "What does SYNC-FAIL-2201B indicate?", "expected_answer": "General synchronization failure indicating network or credential issue", "source": "nexacorp_handbook.txt", "expected_entities": ["SYNC-FAIL-2201B", "CLOUDSYNC-S3"]},
+
+  {"id": 6, "type": "policy", "question": "How do I request time off?", "expected_answer": "Submit leave request through HRPORTAL at least 5 business days in advance", "source": "nexacorp_handbook.txt", "expected_entities": ["HRPORTAL"]},
+  {"id": 7, "type": "policy", "question": "What is the password complexity requirement at NexaCorp?", "expected_answer": "Minimum 16 characters with uppercase, lowercase, digit, and special character", "source": "nexacorp_handbook.txt", "expected_entities": ["AUTH-GATEWAY"]},
+  {"id": 8, "type": "policy", "question": "What are the network segmentation zones?", "expected_answer": "ZONE-PROD, ZONE-DEV, ZONE-DMZ, ZONE-CORP, ZONE-MGMT", "source": "nexacorp_handbook.txt", "expected_entities": ["NEXASEC-FW"]},
+  {"id": 9, "type": "policy", "question": "What is the data retention policy for operational logs?", "expected_answer": "90 days hot storage and 365 days in NEXABACKUP cold storage", "source": "nexacorp_handbook.txt", "expected_entities": ["MONITORX", "NEXABACKUP"]},
+  {"id": 10, "type": "policy", "question": "What happens if I install unapproved software?", "expected_answer": "Only software from Kevin Marsh's approved catalog may be installed", "source": "nexacorp_handbook.txt", "expected_entities": ["BUILDPIPE-CI"]},
+
+  {"id": 11, "type": "who_owns", "question": "Who owns AUTH-GATEWAY?", "expected_answer": "Marcus Thompson", "source": "nexacorp_org_chart.csv", "expected_entities": ["AUTH-GATEWAY"]},
+  {"id": 12, "type": "who_owns", "question": "Who manages NEXACORE-DB?", "expected_answer": "Derek Walsh", "source": "nexacorp_org_chart.csv", "expected_entities": ["NEXACORE-DB"]},
+  {"id": 13, "type": "who_owns", "question": "Who is the Head of IT Security?", "expected_answer": "Priya Nair", "source": "nexacorp_org_chart.csv", "expected_entities": ["Priya Nair"]},
+  {"id": 14, "type": "who_owns", "question": "Who resolves VPN-CERT-7731 issues?", "expected_answer": "Jordan Okafor", "source": "nexacorp_org_chart.csv", "expected_entities": ["VPN-CERT-7731"]},
+  {"id": 15, "type": "who_owns", "question": "Who is the Compliance Officer at NexaCorp?", "expected_answer": "Simone Reyes", "source": "nexacorp_org_chart.csv", "expected_entities": ["Simone Reyes"]},
+
+  {"id": 16, "type": "ticket", "question": "Show me tickets related to VPN issues", "expected_answer": "tickets with VPN error codes", "source": "nexacorp_tickets.csv", "expected_entities": ["NEXAVPN"]},
+  {"id": 17, "type": "ticket", "question": "What tickets are open for AUTH-GATEWAY?", "expected_answer": "AUTH-GATEWAY related tickets", "source": "nexacorp_tickets.csv", "expected_entities": ["AUTH-GATEWAY"]},
+  {"id": 18, "type": "ticket", "question": "How many times has DB-CONN-POOL-99 occurred?", "expected_answer": "Multiple occurrences of connection pool exhaustion", "source": "nexacorp_tickets.csv", "expected_entities": ["DB-CONN-POOL-99"]},
+  {"id": 19, "type": "ticket", "question": "What happened with ticket TKT-10033?", "expected_answer": "ERR-AUTH-9092 for YubiKey MFA users after Vault token rotation", "source": "nexacorp_tickets.csv", "expected_entities": ["TKT-10033"]},
+  {"id": 20, "type": "ticket", "question": "Show me escalated firewall incidents", "expected_answer": "FW-IDS-2209 and FW-DROP-3341 escalated tickets", "source": "nexacorp_tickets.csv", "expected_entities": ["NEXASEC-FW"]},
+
+  {"id": 21, "type": "summary", "question": "Summarize the data classification policy", "expected_answer": "Four tiers: Public, Internal, Confidential, Restricted", "source": "nexacorp_handbook.txt", "expected_entities": []},
+  {"id": 22, "type": "summary", "question": "Give me an overview of the incident severity model", "expected_answer": "P1 Critical, P2 High, P3 Medium, P4 Low", "source": "nexacorp_handbook.txt", "expected_entities": []},
+  {"id": 23, "type": "summary", "question": "Summarize the hardware procurement process", "expected_answer": "Submit in HRPORTAL, Kevin Marsh reviews, escalation for high costs", "source": "nexacorp_handbook.txt", "expected_entities": ["HRPORTAL"]},
+  {"id": 24, "type": "summary", "question": "What are all the VPN error codes?", "expected_answer": "VPN-CERT-7731, VPN-HANDSHAKE-003, VPN-DNS-1882", "source": "nexacorp_handbook.txt", "expected_entities": ["NEXAVPN"]},
+  {"id": 25, "type": "summary", "question": "Summarize the onboarding process for new employees", "expected_answer": "Lena Kovacs coordinates with Tomas Brewer for system access provisioning", "source": "nexacorp_handbook.txt", "expected_entities": ["HRPORTAL"]}
+]
