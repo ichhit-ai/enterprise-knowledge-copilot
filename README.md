@@ -103,12 +103,23 @@ ollama pull llama3.2
 ```
 
 ### Step 4: Build the "Brain" (Ingestion)
-Before running the app, you need to ingest the raw CSV and TXT files. This script will strip the PII, generate embeddings, and build the ChromaDB, BM25, and NetworkX indices.
+This is the most important step. The ingestion script reads the raw files from `data/`, processes them, and builds three search indices that power the copilot.
 
 ```bash
-# Takes ~30 seconds. You only need to run this once (or whenever your raw data changes).
 PYTHONPATH=. python3 src/ingest.py
 ```
+
+**What this script does (in order):**
+1. **Reads** all `.txt` and `.csv` files from the `data/` directory.
+2. **Redacts PII** — strips real names, emails, and phone numbers using spaCy NER + Regex, replacing them with `[REDACTED]` tokens.
+3. **Chunks text** — splits long documents into 800-character overlapping windows (150 chars overlap) to fit the embedding model's context limit.
+4. **Tags metadata** — extracts ticket priorities (P1-P4), statuses, error codes, and system names from CSV rows.
+5. **Builds 3 indices** in the `.index/` folder:
+   - `chroma/` — ChromaDB vector database (semantic search via `bge-small-en-v1.5` embeddings)
+   - `bm25.pkl` — BM25 keyword index (exact-match search)
+   - `graph.pkl` — NetworkX knowledge graph (relational system→owner lookups)
+
+*⏱ Takes ~30 seconds. You only need to run this once. Re-run it if you change any files in `data/`.*
 
 ### Step 5: Launch the Copilot UI
 Start the Streamlit web interface:
