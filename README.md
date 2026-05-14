@@ -1,5 +1,9 @@
 # 🛡️ Enterprise Knowledge Copilot
 
+
+<img width="1024" height="1536" alt="ChatGPT Image May 14, 2026, 11_44_43 AM" src="https://github.com/user-attachments/assets/488abc3d-2439-4c71-bc09-544d4afa23f7" />
+
+
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![LangGraph](https://img.shields.io/badge/Agent-LangGraph-green.svg)](https://github.com/langchain-ai/langgraph)
 [![Ollama](https://img.shields.io/badge/LLM-Ollama-lightgrey.svg)](https://ollama.ai/)
@@ -13,6 +17,8 @@ Large organizations drown in scattered knowledge—unread PDFs, unmaintained org
 **Because it runs entirely on local hardware, highly sensitive corporate data never leaves your infrastructure.**
 
 ---
+
+
 
 ## ✨ Enterprise-Grade Capabilities (Out of the Box)
 
