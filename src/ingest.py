@@ -153,30 +153,6 @@ def build_graph_from_csv(data_dir):
                 e, r, t = row.get("entity","").strip(), row.get("relationship","").strip(), row.get("target","").strip()
                 if e and r and t:
                     G.add_edge(e, t, relation=r)
-
-    for path in glob.glob(os.path.join(data_dir, "*.csv")):
-        if "org_chart" in path or "original" in path:
-            continue
-        with open(path) as f:
-            reader = csv.DictReader(f)
-            fields = reader.fieldnames or []
-            for row in reader:
-                for field in fields:
-                    raw = row.get(field)
-                    if raw is None:
-                        continue
-                    val = " ".join(raw) if isinstance(raw, list) else str(raw)
-                    val = val.strip()
-                    if not val:
-                        continue
-                    doc = nlp(val)
-                    ents = [e.text for e in doc.ents if e.label_ in ("ORG", "PERSON", "PRODUCT", "GPE")]
-                    for i in range(len(ents)):
-                        for j in range(i+1, len(ents)):
-                            if G.has_edge(ents[i], ents[j]):
-                                G[ents[i]][ents[j]]["weight"] = G[ents[i]][ents[j]].get("weight", 1) + 1
-                            else:
-                                G.add_edge(ents[i], ents[j], relation="CO_MENTIONED", weight=1)
     return G
 
 

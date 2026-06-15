@@ -11,7 +11,7 @@ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0
 streamlit
 sentence-transformers
 PyMuPDF
-numpy
+numpy<2
 mcp
 elasticsearch>=8.0.0,<9.0.0
 

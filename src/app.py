@@ -4,6 +4,10 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
+# Inject streamlit secrets into environment variables for backend integrations
+for key in ["ES_URL", "ES_API_KEY", "GROQ_API_KEY"]:
+    if key in st.secrets:
+        os.environ[key] = str(st.secrets[key])
 import time
 import json
 import pickle

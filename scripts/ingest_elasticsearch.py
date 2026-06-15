@@ -8,7 +8,6 @@ from datetime import datetime
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 
-# Re-use ingestion parsing logic from src/ingest.py
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from src.ingest import load_text_files, load_csv_files, load_pdf_files, DATA_DIR
 
@@ -74,6 +73,19 @@ def create_index_if_not_exists(es):
     print(f"Created index '{INDEX_NAME}' with vector mappings.")
 
 def ingest_to_elasticsearch():
+    # Load secrets dynamically from secrets.toml if not in env
+    if not os.environ.get("ES_URL"):
+        try:
+            import tomllib
+            secrets_path = os.path.join(os.path.dirname(__file__), "..", ".streamlit", "secrets.toml")
+            if os.path.exists(secrets_path):
+                with open(secrets_path, "rb") as f:
+                    secrets = tomllib.load(f)
+                    for k, v in secrets.items():
+                        os.environ[k] = str(v)
+        except Exception:
+            pass
+
     es = get_elasticsearch_client()
     
     if not es.ping():
@@ -108,7 +120,7 @@ def ingest_to_elasticsearch():
             print(f"  Processed {i + 1}/{len(docs)} documents...")
 
     print("Uploading to Elasticsearch via bulk API...")
-    success, failed = bulk(es, actions)
+    success, failed = bulk(es, actions, chunk_size=200, request_timeout=120)
     print(f"Done! Successfully indexed {success} documents. Failures: {len(failed) if isinstance(failed, list) else failed}")
 
 if __name__ == "__main__":

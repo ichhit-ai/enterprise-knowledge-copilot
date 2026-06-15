@@ -2,6 +2,20 @@ import os
 import sys
 import asyncio
 import concurrent.futures
+
+# Try loading from .streamlit/secrets.toml if env variables are missing
+for key in ["ES_URL", "ES_API_KEY", "GROQ_API_KEY"]:
+    if not os.environ.get(key):
+        try:
+            import tomllib
+            secrets_path = os.path.join(os.path.dirname(__file__), "..", ".streamlit", "secrets.toml")
+            if os.path.exists(secrets_path):
+                with open(secrets_path, "rb") as f:
+                    secrets = tomllib.load(f)
+                    if key in secrets:
+                        os.environ[key] = str(secrets[key])
+        except Exception:
+            pass
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse

@@ -10,10 +10,12 @@
 2. [The Solution Architecture (Data Flow)](#2-the-solution-architecture)
 3. [System File Structure & Tech Stack](#3-system-file-structure--tech-stack)
 4. [Layer 1 — Data Ingestion & PII Redaction](#4-layer-1--data-ingestion--pii-redaction)
-5. [Layer 2 — Three-Headed Retrieval + Cross-Encoder](#5-layer-2--three-headed-retrieval--cross-encoder)
-6. [Layer 3 — The Agentic Brain (6 Tools)](#6-layer-3--the-agentic-brain-6-tools)
-7. [Layer 4 — Frontend & Provable Evaluation](#7-layer-4--frontend--provable-evaluation)
-8. [Conclusion](#8-conclusion)
+5. [Layer 2 — Local Three-Headed Retrieval Sandbox](#5-layer-2--local-three-headed-retrieval-sandbox)
+6. [Layer 3 — The Production Leap: Elasticsearch 8.x Cluster](#6-layer-3--the-production-leap-elasticsearch-8x-cluster)
+7. [Layer 4 — Model Context Protocol (MCP) Integration](#7-layer-4--model-context-protocol-mcp-integration)
+8. [Layer 5 — The Agentic Brain (6 Tools)](#8-layer-5--the-agentic-brain-6-tools)
+9. [Layer 6 — Frontend & Provable Evaluation](#9-layer-6--frontend--provable-evaluation)
+10. [Conclusion](#10-conclusion)
 
 ---
 
@@ -113,11 +115,13 @@ enterprise copilot/
 | Component | Technology | Why This One? |
 |-----------|-----------|---------------|
 | Embeddings | `BAAI/bge-small-en-v1.5` | Only 33MB, runs on CPU, top-tier for its size |
-| Vector DB | ChromaDB | Zero-config, file-based, perfect for local |
-| Keyword Search | BM25 (rank-bm25) | Industry standard for exact-match retrieval |
+| Local Vector DB | ChromaDB | Zero-config, file-based, perfect for local edge sandbox |
+| Local Keyword Search | BM25 (rank-bm25) | Industry standard for exact-match retrieval |
+| Production Search Engine | Elasticsearch 8.x | Distributed, sharded database handling millions of documents natively |
+| Production DB Gateway | Model Context Protocol (MCP) | Open standard secure communication channel between LLM and ES |
 | Reranker | `ms-marco-MiniLM-L-6-v2` | High-precision Cross-Encoder for top-k refinement |
 | Knowledge Graph | NetworkX | Pure Python, fast relational traversal |
-| LLM | llama3.2 via Ollama | 3B params, runs entirely locally |
+| Local LLM | llama3.2 via Ollama | 3B params, runs entirely locally |
 | Agent Framework | LangGraph | State machine approach > chain approach for routing |
 | PII Detection | spaCy (en_core_web_sm) | Fast, offline NER model |
 
@@ -269,16 +273,87 @@ def _rerank(self, query, docs, k=5):
 ```
 Unlike fast Bi-Encoders (Chroma), a Cross-Encoder pushes the query and the document through the transformer *together*. It is computationally heavy, but incredibly precise. We use it to rerank the top 10 RRF results down to the absolute perfect top 5 chunks.
 
-### 5.5 — The Production Leap: Elasticsearch & MCP Gateway
+## 6. Layer 3 — The Production Leap: Elasticsearch 8.x Cluster
 
 When we scaled our database to **200,000 customer tickets**, our local sandbox prototype ran into three critical limits:
 1. **The Cold-Start Lockup**: Loading the 1.6 GB Chroma vector database from disk into Python memory on startup took **`82 seconds`**, during which the API was completely unresponsive.
 2. **Memory Bloat**: Chroma's in-process index forced each API worker process to consume **1.6 GB of RAM**. Running 4 workers required over 6.4 GB of RAM solely for database caching.
 3. **Write/Search Contention**: Modifying or creating new tickets blocked all concurrent search requests for **`12.5 seconds`** while the BM25 dictionary was serialized in Python.
 
-To solve this, we decoupled the database by integrating a containerized **Elasticsearch 8.x Cluster** queried through a **Model Context Protocol (MCP) gateway**. 
+To solve this, we decoupled the database by integrating a containerized **Elasticsearch 8.x Cluster** as the primary search engine. 
 
-#### Concurrency and Latency Optimization
+### 6.1 — Schema Mapping and HNSW Vector Configuration
+To support both fast exact-keyword matching (lexical) and context-aware retrieval (semantic), we defined a custom Elasticsearch schema with HNSW index constraints:
+
+```json
+{
+  "mappings": {
+    "properties": {
+      "page_content": {
+        "type": "text",
+        "analyzer": "standard"
+      },
+      "embeddings": {
+        "type": "dense_vector",
+        "dims": 384,
+        "index": true,
+        "similarity": "cosine",
+        "index_options": {
+          "type": "hnsw",
+          "m": 16,
+          "ef_construction": 100
+        }
+      },
+      "metadata": {
+        "type": "object",
+        "properties": {
+          "source": { "type": "keyword" },
+          "type": { "type": "keyword" },
+          "system": { "type": "keyword" },
+          "priority": { "type": "keyword" },
+          "status": { "type": "keyword" },
+          "error_code": { "type": "keyword" },
+          "ticket_id": { "type": "keyword" }
+        }
+      }
+    }
+  }
+}
+```
+* **Lexical Head**: `page_content` uses Elasticsearch's standard text analyzer. Queries use native BM25 scoring.
+* **Semantic Head**: The `embeddings` field utilizes the `dense_vector` type with **384 dimensions** (matching `bge-small-en-v1.5`). We configured native HNSW indexing inside Elasticsearch with a cosine similarity metric. This allows Elasticsearch to perform approximate nearest neighbor (ANN) searches in sub-millisecond times directly inside the database kernel.
+
+### 6.2 — Ingestion & Scaling
+To index all **200,000 tickets** efficiently without memory limits:
+* We stream dataset loading in batches using Elasticsearch’s Bulk API.
+* We configure a custom bulk helper in Python with a configured `chunk_size=200` and `request_timeout=120` to guarantee zero socket write timeouts when sending payloads over remote network interfaces.
+* To optimize CPU processing time, we apply a hybrid strategy: all 200,000 tickets are indexed for lexical (BM25) search, but we generate dense vector embeddings only for the first 5,000 documents to run vector matches quickly.
+
+---
+
+## 7. Layer 4 — Model Context Protocol (MCP) Integration
+
+The communication between our LangGraph agent and the Elasticsearch cluster is mediated by a **Model Context Protocol (MCP)** gateway. 
+
+### 7.1 — Standardized Agent-Database Communication
+Instead of writing ad-hoc API endpoints or database connectors, MCP provides a secure, structured stdio-based transport protocol:
+
+```text
+┌─────────────────┐             stdio             ┌─────────────────┐
+│ LangGraph Agent │ ◄───────────────────────────► │   MCP Server    │
+│ (Python Process)│        JSON-RPC 2.0           │ (Node.js/Python)│
+└─────────────────┘                               └────────┬────────┘
+                                                           │
+                                                           ▼
+                                                  ┌─────────────────┐
+                                                  │  Elasticsearch  │
+                                                  │     Cluster     │
+                                                  └─────────────────┘
+```
+
+The MCP Server exposes Elasticsearch functions as structured "tools" to the LLM agent using JSON-RPC 2.0 messages exchanged over standard input/output. This decouples the agent's core routing logic from database driver updates.
+
+### 7.2 — Concurrency and Latency Optimization
 During initial load testing, we observed latency spikes and connection queuing under high concurrency. We resolved this with two major code-level optimizations:
 * **Lock-Free Session Fast-Path**: In `retriever_mcp.py`, session setup was originally protected by a global lock, which serialized all concurrent requests. We implemented a lock-free session check that returns active connections instantly if they are already initialized, eliminating IPC bottlenecking:
   ```python
@@ -286,9 +361,9 @@ During initial load testing, we observed latency spikes and connection queuing u
   if self._session and self._client:
       return {"session": self._session, "client": self._client}
   ```
-* **ThreadPoolExecutor Scaling**: FastAPI's default event loop queues up synchronous tasks. Since LangGraph nodes run synchronously, we scaled the Uvicorn runtime by configuring a custom `ThreadPoolExecutor` with **500 concurrent workers** in `fastapi_sandbox/main.py` to prevent queue queuing.
+* **ThreadPoolExecutor Scaling**: FastAPI's default event loop queues up synchronous tasks. Since LangGraph nodes run synchronously, we scaled the Uvicorn runtime by configuring a custom `ThreadPoolExecutor` with **500 concurrent workers** in `fastapi_sandbox/main.py` to prevent thread queuing.
 
-#### Benchmark Results & Visualization
+### 7.3 — Benchmark Results & Visualization
 The chart below illustrates the dramatic difference in performance between the local SQLite/ChromaDB sandbox and the production-ready Elasticsearch cluster:
 
 ![NexaCorp Enterprise Copilot Retrieval Performance Dashboard](/home/ichhit/.gemini/antigravity/brain/4d14ecbe-6675-4b24-922d-91c0f055c06e/benchmark_dashboard.png)
@@ -300,11 +375,11 @@ The chart below illustrates the dramatic difference in performance between the l
 
 ---
 
-## 6. Layer 3 — The Agentic Brain (6 Tools)
+## 8. Layer 5 — The Agentic Brain (6 Tools)
 
 We wanted our system to *think* and *act*, not just answer. We chose LangGraph to build a state machine.
 
-### 6.1 — The State Dictionary
+### 8.1 — The State Dictionary
 
 ```python
 class State(TypedDict):
@@ -321,7 +396,7 @@ class State(TypedDict):
 ```
 Every node reads from and writes to this shared state.
 
-### 6.2 — The Router
+### 8.2 — The Router
 
 **❌ The Setback**: Initially, we used the LLaMA model to route queries. The 3B model was inconsistent. It would frequently pick the wrong tool or hallucinate tool names.
 **The Fix**: We stripped the LLM out of the routing phase entirely. We wrote a blazing-fast, deterministic Python function that uses Keyword matching to classify the query.
@@ -338,7 +413,7 @@ def classify_query(question):
     return "docs"
 ```
 
-### 6.3 — Entity Extraction
+### 8.3 — Entity Extraction
 
 ```python
 def extract_entities(text):
@@ -350,7 +425,7 @@ def extract_entities(text):
 ```
 We combine spaCy NER, Regex (for error codes), and dictionary matching (for system acronyms).
 
-### 6.4 — The 6 Tools & Ticket Deduplication
+### 8.4 — The 6 Tools & Ticket Deduplication
 
 1. **`tool_search_docs`**: Scans policies and runbooks.
 2. **`tool_search_tickets`**: Searches historical incident reports.
@@ -371,7 +446,7 @@ if open_tickets:
         return "⚠️ Potential duplicate detected! An existing open ticket appears very similar..."
 ```
 
-### 6.5 — The LangGraph State Machine
+### 8.5 — The LangGraph State Machine
 
 ```text
            [Route Query]
@@ -393,7 +468,7 @@ if open_tickets:
       [Audit Log] ◄────────┘
 ```
 
-### 6.6 — Smart Escalation (Zero-LLM Fast Path)
+### 8.6 — Smart Escalation (Zero-LLM Fast Path)
 
 If no documents are retrieved, the agent bypasses the LLM to save compute, traverses the graph to find the appropriate system owner, and returns:
 `"⚠️ I couldn't find the answer. Recommended contact: Marcus Thompson (AUTH-GATEWAY issues)."`
@@ -401,7 +476,7 @@ This completely eliminates hallucination risk for zero-context queries.
 
 ---
 
-## 7. Layer 4 — Frontend & Provable Evaluation
+## 9. Layer 6 — Frontend & Provable Evaluation
 
 Enterprise systems require provable metrics. We built a 25-question ground-truth test set (`test_set.json`).
 **Current Benchmarks**:
@@ -409,7 +484,7 @@ Enterprise systems require provable metrics. We built a 25-question ground-truth
 - **Recall@5**: `0.880`
 - **Source Hit Rate**: `80.0%`
 
-### 7.1 — Faithfulness & Real-Time Metrics
+### 9.1 — Faithfulness & Real-Time Metrics
 
 We wanted the user to trust the bot. So, for every single response, the system computes its own metrics:
 
@@ -426,7 +501,7 @@ def compute_faithfulness(answer, contexts):
 - **Context Relevance**: Average cosine similarity between the query and all retrieved chunks.
 - **Confidence Badge**: Displayed in the Streamlit UI as `40% retrieval score + 30% faithfulness + 30% relevance`.
 
-### 7.2 — Streamlit UX Polish & Security
+### 9.2 — Streamlit UX Polish & Security
 
 - **System Health Dashboard**: Real-time sidebar showing indexed chunks and ingestion timestamps.
 - **Reasoning Traces**: An expander lets users see exactly how the LangGraph router classified their query.
@@ -435,6 +510,6 @@ def compute_faithfulness(answer, contexts):
 
 ---
 
-## 8. Conclusion
+## 10. Conclusion
 
 By combining deterministic safeguards (keyword routing, regex PII redaction) with probabilistic AI (Hybrid Retrieval, Cross-Encoders, LangGraph), we transformed a messy folder of corporate documents into a resilient, autonomous, and highly secure Enterprise Knowledge Copilot.
