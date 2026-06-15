@@ -62,30 +62,7 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
 
-    # Retrieval Engine selection
-    retrieval_mode = st.selectbox(
-        "🔍 Retrieval Engine",
-        ["Edge Sandbox (Local Chroma+BM25)", "Enterprise Cluster (Elasticsearch+MCP)"],
-        help="Select search infrastructure (local vs production scale)"
-    )
-    mode_key = "elasticsearch" if "Elasticsearch" in retrieval_mode else "local"
-
-    if mode_key == "elasticsearch":
-        st.markdown("#### ☁️ Elastic Cloud Management")
-        # Check environment configuration
-        es_url = os.environ.get("ES_URL")
-        es_api_key = os.environ.get("ES_API_KEY")
-        if not es_url:
-            st.info("💡 `ES_URL` is not configured in environment/secrets. Click below to try local Elasticsearch at localhost:9200.")
-        if st.button("Index Data to Elastic Cloud", use_container_width=True):
-            with st.spinner("Indexing documents..."):
-                try:
-                    from scripts.ingest_elasticsearch import ingest_to_elasticsearch
-                    ingest_to_elasticsearch()
-                    st.success("Successfully indexed documents!")
-                except Exception as e:
-                    st.error(f"Failed to index: {e}")
-        st.divider()
+    mode_key = "local"
 
     # Role-based access
     role = st.selectbox("👤 Access Role", ["Employee", "Manager", "IT Admin"],
