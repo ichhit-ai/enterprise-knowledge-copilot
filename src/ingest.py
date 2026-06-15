@@ -11,7 +11,12 @@ from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 
-nlp = spacy.load("en_core_web_sm")
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    import spacy.cli
+    spacy.cli.download("en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm")
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 INDEX_DIR = os.path.join(os.path.dirname(__file__), "..", ".index")

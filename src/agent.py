@@ -17,7 +17,12 @@ CACHE_ENABLED = True   # Enable semantic caching for repetitive queries
 CACHE_PATH = os.path.join(os.path.dirname(__file__), "..", ".index", "response_cache.pkl")
 
 
-nlp = spacy.load("en_core_web_sm")
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    import spacy.cli
+    spacy.cli.download("en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm")
 
 
 ERROR_CODE_RE = re.compile(r'[A-Z]{2,}[\-][A-Z]*[\-]?\w+')
