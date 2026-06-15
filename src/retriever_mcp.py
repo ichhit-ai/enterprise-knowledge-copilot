@@ -1,10 +1,21 @@
 import asyncio
 import os
 import sys
+import threading
+import concurrent.futures
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
+
+# Persistent background loop to run all MCP operations and avoid cold starts on every Streamlit query
+_mcp_loop = asyncio.new_event_loop()
+def _start_loop(loop):
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+_loop_thread = threading.Thread(target=_start_loop, args=(_mcp_loop,), daemon=True)
+_loop_thread.start()
 
 class HybridMCPRetriever:
     def __init__(self):
@@ -36,83 +47,102 @@ class HybridMCPRetriever:
         raw_emb = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5", model_kwargs={"device": "cpu"})
         from src.retriever import CachedEmbeddings
         self.embeddings_model = CachedEmbeddings(raw_emb)
-        # Loop-isolated sessions and locks to support concurrent event loops in Streamlit threads
-        self._sessions = {}  # loop -> {"session": ClientSession, "context": stdio_client, "search_tool": str}
-        self._locks = {}     # loop -> asyncio.Lock
+        self._session_info = None
+        self._lock = None
+
+    async def _get_session_info_impl(self):
+        """Internal method executed strictly on _mcp_loop to initialize/return the session."""
+        if self._session_info:
+            return self._session_info
+
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+
+        # Initialize connection under the loop's lock
+        async with self._lock:
+            if self._session_info:
+                return self._session_info
+
+            client_context = stdio_client(self.server_params)
+            read, write = await client_context.__aenter__()
+            session = ClientSession(read, write)
+            await session.__aenter__()
+            await session.initialize()
+
+            # Find and cache the search tool name dynamically for this session
+            search_tool = None
+            tools_list = await session.list_tools()
+            for tool in tools_list.tools:
+                if tool.name in ["elasticsearch_search", "search", "search_documents"]:
+                    search_tool = tool.name
+                    break
+
+            if not search_tool:
+                raise RuntimeError(f"Could not find a search tool in the Elasticsearch MCP server. Available tools: {[t.name for t in tools_list.tools]}")
+
+            self._session_info = {
+                "session": session,
+                "context": client_context,
+                "search_tool": search_tool
+            }
+            return self._session_info
 
     async def get_session_info(self):
-        """Get or initialize the persistent MCP connection session info for the current loop."""
-        current_loop = asyncio.get_running_loop()
-        
-        # Lock-free fast path for already initialized session
-        if current_loop in self._sessions:
-            return self._sessions[current_loop]
-        
-        # 1. Create a lock for the current loop if it doesn't exist yet
-        if current_loop not in self._locks:
-            self._locks[current_loop] = asyncio.Lock()
-        
-        # 2. Initialize connection under the loop's lock to ensure thread-safety and avoid concurrency conflicts
-        async with self._locks[current_loop]:
-            if current_loop in self._sessions:
-                return self._sessions[current_loop]
-                
-            # Prune closed event loops to prevent memory leaks
-            closed_loops = [l for l in self._sessions if l.is_closed()]
-            for l in closed_loops:
-                self._sessions.pop(l, None)
-                self._locks.pop(l, None)
+        """Thread-safe and loop-safe public method to get session info."""
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
 
-            if current_loop not in self._sessions:
-                client_context = stdio_client(self.server_params)
-                read, write = await client_context.__aenter__()
-                session = ClientSession(read, write)
-                await session.__aenter__()
-                await session.initialize()
-
-                # Find and cache the search tool name dynamically for this session
-                search_tool = None
-                tools_list = await session.list_tools()
-                for tool in tools_list.tools:
-                    if tool.name in ["elasticsearch_search", "search", "search_documents"]:
-                        search_tool = tool.name
-                        break
-
-                if not search_tool:
-                    raise RuntimeError(f"Could not find a search tool in the Elasticsearch MCP server. Available tools: {[t.name for t in tools_list.tools]}")
-
-                self._sessions[current_loop] = {
-                    "session": session,
-                    "context": client_context,
-                    "search_tool": search_tool
-                }
-
-            return self._sessions[current_loop]
+        if running_loop != _mcp_loop:
+            future = asyncio.run_coroutine_threadsafe(self._get_session_info_impl(), _mcp_loop)
+            return await asyncio.wrap_future(future)
+        else:
+            return await self._get_session_info_impl()
 
     async def close(self):
-        """Gracefully close all active sessions across all event loops."""
-        for loop, info in list(self._sessions.items()):
-            # Only attempt clean up if the loop is still open
-            if not loop.is_closed():
-                try:
-                    await info["session"].__aexit__(None, None, None)
-                except Exception:
-                    pass
-                try:
-                    await info["context"].__aexit__(None, None, None)
-                except Exception:
-                    pass
-        self._sessions.clear()
-        self._locks.clear()
+        """Gracefully close active session."""
+        if asyncio.get_running_loop() != _mcp_loop:
+            future = asyncio.run_coroutine_threadsafe(self._close_impl(), _mcp_loop)
+            return await asyncio.wrap_future(future)
+        else:
+            return await self._close_impl()
+
+    async def _close_impl(self):
+        if self._session_info:
+            try:
+                await self._session_info["session"].__aexit__(None, None, None)
+            except Exception:
+                pass
+            try:
+                await self._session_info["context"].__aexit__(None, None, None)
+            except Exception:
+                pass
+            self._session_info = None
 
     async def search_docs(self, query_text: str, index_name: str = "nexacorp_docs", k: int = 5, filter_dict: dict = None):
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop != _mcp_loop:
+            future = asyncio.run_coroutine_threadsafe(
+                self._search_docs_impl(query_text, index_name, k, filter_dict),
+                _mcp_loop
+            )
+            return await asyncio.wrap_future(future)
+        else:
+            return await self._search_docs_impl(query_text, index_name, k, filter_dict)
+
+    async def _search_docs_impl(self, query_text: str, index_name: str = "nexacorp_docs", k: int = 5, filter_dict: dict = None):
         # 1. Expand and embed query
         from src.retriever import expand_query
         expanded_query = expand_query(query_text)
         query_vector = self.embeddings_model.embed_query(expanded_query)
 
-        # 2. Get the running session info for the current loop
-        session_info = await self.get_session_info()
+        # 2. Get the running session info (already running on _mcp_loop)
+        session_info = await self._get_session_info_impl()
         session = session_info["session"]
         search_tool = session_info["search_tool"]
 
@@ -193,6 +223,21 @@ class HybridMCPRetriever:
         return documents, 1.0
 
     async def search_ticket_by_id(self, ticket_id: str):
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop != _mcp_loop:
+            future = asyncio.run_coroutine_threadsafe(
+                self._search_ticket_by_id_impl(ticket_id),
+                _mcp_loop
+            )
+            return await asyncio.wrap_future(future)
+        else:
+            return await self._search_ticket_by_id_impl(ticket_id)
+
+    async def _search_ticket_by_id_impl(self, ticket_id: str):
         """Perform a direct exact match lookup for a ticket ID in Elasticsearch."""
         t_id_clean = str(ticket_id).upper()
         if t_id_clean.startswith("TKT-"):
@@ -205,7 +250,7 @@ class HybridMCPRetriever:
         if not t_id_clean.startswith("TKT-"):
             terms.append(f"TKT-{t_id_clean}")
 
-        session_info = await self.get_session_info()
+        session_info = await self._get_session_info_impl()
         session = session_info["session"]
         search_tool = session_info["search_tool"]
 
@@ -272,4 +317,3 @@ class HybridMCPRetriever:
                 ))
 
         return documents[0] if documents else None
-
