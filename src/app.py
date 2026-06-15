@@ -1,7 +1,11 @@
+import os
+import sys
+# Resolve root path for imports in cloud environments
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import streamlit as st
 import time
 import json
-import os
 import pickle
 import asyncio
 from datetime import datetime
