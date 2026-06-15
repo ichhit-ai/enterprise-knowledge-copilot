@@ -1,5 +1,5 @@
 {
-  "precision_at_5": 0.456,
-  "recall_at_5": 0.88,
+  "precision_at_5": 0.4,
+  "recall_at_5": 0.8,
   "source_hit_rate": 0.8
 }

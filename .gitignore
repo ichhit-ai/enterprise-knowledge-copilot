@@ -3,8 +3,8 @@ __pycache__/
 *.pyc
 
 # Local Databases
-.index/
 chroma.sqlite3
+.index_full/
 
 # Logs
 audit.jsonl
@@ -14,3 +14,9 @@ feedback.jsonl
 .env
 venv/
 env/
+node_modules/
+mcp-server/node_modules/
+
+# Large Datasets
+data/customer_support_tickets_200k.csv
+data/customer_support_tickets_200k.csv.bak

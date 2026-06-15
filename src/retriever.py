@@ -26,27 +26,69 @@ ABBREVIATION_MAP = {
 
 def expand_query(query):
     """Expand abbreviations and add synonyms to improve retrieval."""
-    tokens = query.lower().split()
+    q_low = query.lower()
     expansions = []
+    
+    # Check multi-word synonyms first
+    for key, val in ABBREVIATION_MAP.items():
+        if len(key.split()) > 1 and key in q_low:
+            expansions.append(val)
+            
+    # Check single-word abbreviations
+    tokens = q_low.split()
     for tok in tokens:
         clean = tok.strip("?,.")
-        if clean in ABBREVIATION_MAP:
+        if clean in ABBREVIATION_MAP and len(clean.split()) == 1:
             expansions.append(ABBREVIATION_MAP[clean])
+            
     if expansions:
-        return query + " " + " ".join(expansions)
+        # Avoid duplicate expansions
+        unique_exp = []
+        for x in expansions:
+            if x not in unique_exp:
+                unique_exp.append(x)
+        return query + " " + " ".join(unique_exp)
     return query
 
 
+class CachedEmbeddings:
+    def __init__(self, raw_embeddings):
+        self.raw_embeddings = raw_embeddings
+        self.cache = {}
+
+    def embed_query(self, text):
+        if text not in self.cache:
+            self.cache[text] = self.raw_embeddings.embed_query(text)
+        return self.cache[text]
+
+    def embed_documents(self, texts):
+        return self.raw_embeddings.embed_documents(texts)
+
+
 class Retriever:
-    def __init__(self):
-        self.emb = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5")
-        self.chroma = Chroma(persist_directory=os.path.join(INDEX_DIR, "chroma"),
+    def __init__(self, index_dir=None):
+        if index_dir is None:
+            index_dir = INDEX_DIR
+        raw_emb = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5", model_kwargs={"device": "cpu"})
+        self.emb = CachedEmbeddings(raw_emb)
+        self.chroma = Chroma(persist_directory=os.path.join(index_dir, "chroma"),
                              embedding_function=self.emb)
 
-        with open(os.path.join(INDEX_DIR, "bm25.pkl"), "rb") as f:
+        with open(os.path.join(index_dir, "bm25.pkl"), "rb") as f:
             self.bm25, self.bm25_docs = pickle.load(f)
 
-        with open(os.path.join(INDEX_DIR, "graph.pkl"), "rb") as f:
+        self.ticket_map = {}
+        for doc in self.bm25_docs:
+            t_id = doc.metadata.get("ticket_id")
+            if t_id:
+                t_id_str = str(t_id).upper()
+                self.ticket_map[t_id_str] = doc
+                if t_id_str.startswith("TKT-"):
+                    self.ticket_map[t_id_str[4:]] = doc
+                else:
+                    self.ticket_map[f"TKT-{t_id_str}"] = doc
+
+        with open(os.path.join(index_dir, "graph.pkl"), "rb") as f:
             self.graph = pickle.load(f)
 
         # Cross-encoder reranker (lazy load)
@@ -104,16 +146,20 @@ class Retriever:
 
     def search_keyword(self, query, k=5, source_filter=None):
         q = expand_query(query)
-        tokens = q.lower().split()
-        scores = self.bm25.get_scores(tokens)
+        # Clean tokens to strip punctuation (handles trailing periods, commas, etc. in queries)
+        tokens = [tok.strip("?,.:;()[]{}!\"'") for tok in q.lower().split()]
+        tokens = [tok for tok in tokens if tok]
+        scores = self.bm25.get_scores(tokens) if tokens else [0.0] * len(self.bm25_docs)
         ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
         results = []
         for i in ranked:
             if scores[i] <= 0:
                 break
             doc = self.bm25_docs[i]
-            if source_filter and doc.metadata.get("source") != source_filter:
-                continue
+            if source_filter:
+                allowed = [source_filter] if isinstance(source_filter, str) else source_filter
+                if doc.metadata.get("source") not in allowed:
+                    continue
             results.append((doc, scores[i]))
             if len(results) >= k:
                 break
@@ -147,13 +193,15 @@ class Retriever:
         return self._rrf_fuse(query, sem + sem_rb, kw, k)
 
     def search_tickets(self, query, k=5):
-        sem = self.search_semantic(query, k, filter_dict={"source": "nexacorp_tickets.csv"})
-        kw = self.search_keyword(query, k, source_filter="nexacorp_tickets.csv")
+        allowed_sources = ["nexacorp_tickets.csv", "customer_support_tickets_200k.csv"]
+        sem = self.search_semantic(query, k, filter_dict={"source": {"$in": allowed_sources}})
+        kw = self.search_keyword(query, k, source_filter=allowed_sources)
         return self._rrf_fuse(query, sem, kw, k)
 
     def search_filtered_tickets(self, query, k=5, priority=None, system=None):
         """Metadata-aware ticket search with priority/system filters."""
-        filter_conditions = {"source": "nexacorp_tickets.csv"}
+        allowed_sources = ["nexacorp_tickets.csv", "customer_support_tickets_200k.csv"]
+        filter_conditions = {"source": {"$in": allowed_sources}}
         if priority:
             filter_conditions["priority"] = priority
         if system:
@@ -166,7 +214,7 @@ class Retriever:
             filter_dict = filter_conditions
 
         sem = self.search_semantic(query, k, filter_dict=filter_dict)
-        kw = self.search_keyword(query, k, source_filter="nexacorp_tickets.csv")
+        kw = self.search_keyword(query, k, source_filter=allowed_sources)
         # Filter BM25 results by metadata too
         if priority or system:
             filtered_kw = []
@@ -228,3 +276,9 @@ class Retriever:
             final_docs = [item["doc"] for item in fused[:k]]
         avg_score = sum(item["rrf"] for item in fused[:k]) / k if fused else 0
         return final_docs, avg_score
+
+    def search_ticket_by_id(self, ticket_id):
+        """Perform a direct exact match lookup for a ticket ID in the local index."""
+        t_id_clean = str(ticket_id).upper()
+        return self.ticket_map.get(t_id_clean)
+

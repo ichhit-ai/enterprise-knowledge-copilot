@@ -7,6 +7,8 @@ import asyncio
 from datetime import datetime
 from src.agent import build_agent
 
+INDEX_DIR = os.path.join(os.path.dirname(__file__), "..", ".index_full")
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
 st.set_page_config(page_title="NexaCorp Copilot", page_icon="🛡️", layout="wide")
 
@@ -94,8 +96,6 @@ with st.sidebar:
 
     # System health dashboard
     st.markdown("### 📊 System Health")
-    INDEX_DIR = os.path.join(os.path.dirname(__file__), "..", ".index")
-    DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
     try:
         with open(os.path.join(INDEX_DIR, "bm25.pkl"), "rb") as f:
@@ -113,7 +113,9 @@ with st.sidebar:
 
     try:
         import csv
-        ticket_path = os.path.join(DATA_DIR, "nexacorp_tickets.csv")
+        ticket_path = os.path.join(DATA_DIR, "customer_support_tickets_200k.csv")
+        if not os.path.exists(ticket_path):
+            ticket_path = os.path.join(DATA_DIR, "customer_support_tickets_200k.csv.bak")
         with open(ticket_path) as f:
             ticket_count = sum(1 for _ in csv.DictReader(f))
     except Exception:
@@ -156,7 +158,7 @@ st.divider()
 
 @st.cache_resource
 def get_agent():
-    return build_agent()
+    return build_agent(index_dir=INDEX_DIR)
 
 agent, retriever = get_agent()
 

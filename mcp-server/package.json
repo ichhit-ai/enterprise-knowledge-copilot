@@ -1,0 +1,13 @@
+{
+  "name": "mcp-server-elasticsearch-v8",
+  "version": "1.0.0",
+  "description": "Local MCP Server with Elasticsearch v8 client",
+  "main": "index.js",
+  "dependencies": {
+    "@elastic/mcp-server-elasticsearch": "0.3.1",
+    "@elastic/elasticsearch": "^8.13.0"
+  },
+  "overrides": {
+    "@elastic/elasticsearch": "^8.13.0"
+  }
+}
