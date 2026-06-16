@@ -1,6 +1,7 @@
 langchain>=0.3
 langchain-community
 langchain-ollama
+langchain-openai
 langchain-huggingface
 langgraph
 chromadb
