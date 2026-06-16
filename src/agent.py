@@ -266,18 +266,20 @@ def build_agent(model="llama3.2", index_dir=None):
     vllm_url = os.environ.get("VLLM_URL")
     if groq_key:
         try:
-            from langchain_community.chat_models import ChatOpenAI
+            from langchain_openai import ChatOpenAI
             llm = ChatOpenAI(
                 model=os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
                 openai_api_key=groq_key,
                 openai_api_base="https://api.groq.com/openai/v1",
                 temperature=0
             )
+            print(f"[LLM] Using Groq API with model {os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')}")
         except Exception as e:
+            print(f"[LLM] Groq init failed: {e} — falling back to Ollama")
             llm = ChatOllama(model=model, temperature=0)
     elif vllm_url:
         try:
-            from langchain_community.chat_models import ChatOpenAI
+            from langchain_openai import ChatOpenAI
             llm = ChatOpenAI(
                 model=os.environ.get("VLLM_MODEL", "meta-llama/Llama-3.2-3B-Instruct"),
                 openai_api_key="EMPTY",
@@ -285,6 +287,7 @@ def build_agent(model="llama3.2", index_dir=None):
                 temperature=0
             )
         except Exception as e:
+            print(f"[LLM] vLLM init failed: {e} — falling back to Ollama")
             llm = ChatOllama(model=model, temperature=0)
     else:
         llm = ChatOllama(model=model, temperature=0)
