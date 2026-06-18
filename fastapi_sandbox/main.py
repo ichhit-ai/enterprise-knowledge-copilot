@@ -30,7 +30,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 try:
     from src.agent import build_agent
-    agent, retriever = build_agent()
+    index_full_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".index_full"))
+    index_dir = index_full_path if os.path.exists(index_full_path) else None
+    agent, retriever = build_agent(index_dir=index_dir)
 except Exception as e:
     agent, retriever = None, None
     print(f"Error loading agent: {e}")

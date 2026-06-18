@@ -4,8 +4,17 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
+import getpass
+is_local = (getpass.getuser() == "ichhit")
+
+if is_local:
+    os.environ.pop("ES_URL", None)
+    os.environ.pop("ES_API_KEY", None)
+
 # Inject streamlit secrets into environment variables for backend integrations
 for key in ["ES_URL", "ES_API_KEY", "GROQ_API_KEY"]:
+    if is_local and key in ["ES_URL", "ES_API_KEY"]:
+        continue
     if key in st.secrets:
         os.environ[key] = str(st.secrets[key])
 import time
@@ -75,13 +84,19 @@ with st.sidebar:
     mode_key = "elasticsearch" if "Elasticsearch" in retrieval_mode else "local"
 
     if mode_key == "elasticsearch":
-        st.markdown("#### ☁️ Elastic Cloud Management")
-        # Check environment configuration
-        es_url = os.environ.get("ES_URL")
-        es_api_key = os.environ.get("ES_API_KEY")
-        if not es_url:
-            st.info("💡 `ES_URL` is not configured in environment/secrets. Click below to try local Elasticsearch at localhost:9200.")
-        if st.button("Index Data to Elastic Cloud", use_container_width=True):
+        es_url = os.environ.get("ES_URL", "")
+        is_local_es = not es_url or "localhost" in es_url or "127.0.0.1" in es_url
+        
+        if is_local_es:
+            st.markdown("#### 🖥️ Local Elasticsearch Cluster")
+            if not es_url:
+                st.info("💡 `ES_URL` is not configured in environment/secrets. Using local Elasticsearch at http://localhost:9200.")
+            btn_label = "Index Data to Local Elasticsearch"
+        else:
+            st.markdown("#### ☁️ Elastic Cloud Management")
+            btn_label = "Index Data to Elastic Cloud"
+
+        if st.button(btn_label, use_container_width=True):
             with st.spinner("Indexing documents..."):
                 try:
                     from scripts.ingest_elasticsearch import ingest_to_elasticsearch
@@ -105,36 +120,42 @@ with st.sidebar:
     # System health dashboard
     st.markdown("### 📊 System Health")
 
-    try:
-        with open(os.path.join(INDEX_DIR, "bm25.pkl"), "rb") as f:
-            _, bm25_docs = pickle.load(f)
-        total_docs = len(bm25_docs)
-    except Exception:
-        total_docs = "?"
+    @st.cache_data
+    def load_system_health(index_dir, data_dir):
+        try:
+            with open(os.path.join(index_dir, "bm25.pkl"), "rb") as f:
+                _, bm25_docs = pickle.load(f)
+            total_docs = len(bm25_docs)
+        except Exception:
+            total_docs = "?"
 
-    try:
-        with open(os.path.join(INDEX_DIR, "graph.pkl"), "rb") as f:
-            graph = pickle.load(f)
-        nodes, edges = graph.number_of_nodes(), graph.number_of_edges()
-    except Exception:
-        nodes, edges = "?", "?"
+        try:
+            with open(os.path.join(index_dir, "graph.pkl"), "rb") as f:
+                graph = pickle.load(f)
+            nodes, edges = graph.number_of_nodes(), graph.number_of_edges()
+        except Exception:
+            nodes, edges = "?", "?"
 
-    try:
-        import csv
-        ticket_path = os.path.join(DATA_DIR, "customer_support_tickets_200k.csv")
-        if not os.path.exists(ticket_path):
-            ticket_path = os.path.join(DATA_DIR, "customer_support_tickets_200k.csv.bak")
-        with open(ticket_path) as f:
-            ticket_count = sum(1 for _ in csv.DictReader(f))
-    except Exception:
-        ticket_count = "?"
+        try:
+            import csv
+            ticket_path = os.path.join(data_dir, "customer_support_tickets_200k.csv")
+            if not os.path.exists(ticket_path):
+                ticket_path = os.path.join(data_dir, "customer_support_tickets_200k.csv.bak")
+            with open(ticket_path) as f:
+                ticket_count = sum(1 for _ in csv.DictReader(f))
+        except Exception:
+            ticket_count = "?"
 
-    try:
-        with open(os.path.join(INDEX_DIR, "ingest_meta.pkl"), "rb") as f:
-            meta = pickle.load(f)
-        last_ingest = meta.get("timestamp", "Unknown")[:16]
-    except Exception:
-        last_ingest = "Unknown"
+        try:
+            with open(os.path.join(index_dir, "ingest_meta.pkl"), "rb") as f:
+                meta = pickle.load(f)
+            last_ingest = meta.get("timestamp", "Unknown")[:16]
+        except Exception:
+            last_ingest = "Unknown"
+
+        return total_docs, nodes, edges, ticket_count, last_ingest
+
+    total_docs, nodes, edges, ticket_count, last_ingest = load_system_health(INDEX_DIR, DATA_DIR)
 
     st.markdown(f'<p class="health-stat">📄 Documents indexed: <b>{total_docs}</b></p>', unsafe_allow_html=True)
     st.markdown(f'<p class="health-stat">🕸️ Graph nodes: <b>{nodes}</b> | edges: <b>{edges}</b></p>', unsafe_allow_html=True)
@@ -197,7 +218,9 @@ if st.session_state.get("onboarding_mode"):
                     try:
                         result = asyncio.run(agent.ainvoke({"question": q, "role": role, "mode": mode_key}))
                     except Exception as e:
-                        st.warning("⚠️ Remote Elasticsearch connection failed. Falling back to Local Edge Sandbox.")
+                        import traceback
+                        traceback.print_exc()
+                        st.warning(f"⚠️ Remote Elasticsearch connection failed ({e}). Falling back to Local Edge Sandbox.")
                         result = asyncio.run(agent.ainvoke({"question": q, "role": role, "mode": "local"}))
 
                 st.markdown(result.get("answer", "No answer available."))
@@ -304,7 +327,9 @@ if prompt:
             try:
                 result = asyncio.run(agent.ainvoke({"question": prompt, "history": history, "role": role, "mode": mode_key}))
             except Exception as e:
-                st.warning("⚠️ Remote Elasticsearch connection failed. Falling back to Local Edge Sandbox.")
+                import traceback
+                traceback.print_exc()
+                st.warning(f"⚠️ Remote Elasticsearch connection failed ({e}). Falling back to Local Edge Sandbox.")
                 result = asyncio.run(agent.ainvoke({"question": prompt, "history": history, "role": role, "mode": "local"}))
             elapsed = time.time() - t0
 

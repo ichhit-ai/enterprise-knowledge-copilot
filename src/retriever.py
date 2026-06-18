@@ -55,9 +55,14 @@ class CachedEmbeddings:
     def __init__(self, raw_embeddings):
         self.raw_embeddings = raw_embeddings
         self.cache = {}
+        self.max_size = 2000
 
     def embed_query(self, text):
         if text not in self.cache:
+            if len(self.cache) >= self.max_size:
+                # Pop first key (FIFO)
+                first_key = next(iter(self.cache))
+                self.cache.pop(first_key)
             self.cache[text] = self.raw_embeddings.embed_query(text)
         return self.cache[text]
 
@@ -187,20 +192,18 @@ class Retriever:
     # ── Filtered search methods ───────────────────────────────────────────────
     def search_docs(self, query, k=5):
         sem = self.search_semantic(query, k, filter_dict={"type": "handbook"})
-        kw = self.search_keyword(query, k, source_filter="nexacorp_handbook.txt")
-        # Also search runbook documents
-        sem_rb = self.search_semantic(query, k, filter_dict={"type": "handbook"})
-        return self._rrf_fuse(query, sem + sem_rb, kw, k)
+        kw = self.search_keyword(query, k, source_filter=["nexacorp_handbook.txt", "nexacorp_vpn_auth_runbook.txt"])
+        return self._rrf_fuse(query, sem, kw, k)
 
     def search_tickets(self, query, k=5):
-        allowed_sources = ["nexacorp_tickets.csv", "customer_support_tickets_200k.csv"]
+        allowed_sources = ["nexacorp_tickets.csv", "customer_support_tickets_200k.csv", "customer_support_tickets_200k.csv.bak"]
         sem = self.search_semantic(query, k, filter_dict={"source": {"$in": allowed_sources}})
         kw = self.search_keyword(query, k, source_filter=allowed_sources)
         return self._rrf_fuse(query, sem, kw, k)
 
     def search_filtered_tickets(self, query, k=5, priority=None, system=None):
         """Metadata-aware ticket search with priority/system filters."""
-        allowed_sources = ["nexacorp_tickets.csv", "customer_support_tickets_200k.csv"]
+        allowed_sources = ["nexacorp_tickets.csv", "customer_support_tickets_200k.csv", "customer_support_tickets_200k.csv.bak"]
         filter_conditions = {"source": {"$in": allowed_sources}}
         if priority:
             filter_conditions["priority"] = priority
@@ -250,14 +253,16 @@ class Retriever:
         return [doc for doc, _ in ranked[:k]]
 
     def _rrf_fuse(self, query, sem_results, kw_results, k):
+        import hashlib
         scored = {}
         for rank, (doc, dist) in enumerate(sem_results):
-            key = doc.page_content[:120]
-            scored[key] = {"doc": doc, "rrf": 0, "sim": 1 - min(dist, 1)}
+            key = hashlib.md5(doc.page_content.encode("utf-8", errors="ignore")).hexdigest()
+            if key not in scored:
+                scored[key] = {"doc": doc, "rrf": 0, "sim": 1 - min(dist, 1)}
             scored[key]["rrf"] += 1 / (60 + rank)
 
         for rank, (doc, bm_score) in enumerate(kw_results):
-            key = doc.page_content[:120]
+            key = hashlib.md5(doc.page_content.encode("utf-8", errors="ignore")).hexdigest()
             if key not in scored:
                 scored[key] = {"doc": doc, "rrf": 0, "sim": 0}
             scored[key]["rrf"] += 1 / (60 + rank)

@@ -70,6 +70,21 @@ def load_text_files(data_dir):
 
 def load_csv_files(data_dir):
     docs = []
+    # Load all employee names from org chart for high-performance in-memory redaction
+    org_chart_names = set()
+    name_pat = re.compile(r'^[A-Z][a-zA-Z]*\s[A-Z][a-zA-Z]*$')
+    org_path = os.path.join(data_dir, "nexacorp_org_chart.csv")
+    if os.path.exists(org_path):
+        with open(org_path) as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                ent = r.get("entity", "").strip()
+                tgt = r.get("target", "").strip()
+                if name_pat.match(ent):
+                    org_chart_names.add(ent)
+                if name_pat.match(tgt):
+                    org_chart_names.add(tgt)
+
     for path in glob.glob(os.path.join(data_dir, "*.csv*")):
         name = os.path.basename(path)
         # Skip the lightweight nexacorp_tickets.csv and backups
@@ -83,11 +98,22 @@ def load_csv_files(data_dir):
             with open(path) as f:
                 reader = csv.DictReader(f)
                 for row in reader:
+                    # Redact columns directly in-memory
+                    row_clean = dict(row)
+                    if "employee_name" in row_clean:
+                        row_clean["employee_name"] = "[REDACTED_PERSON]"
+                    if "customer_name" in row_clean:
+                        row_clean["customer_name"] = "[REDACTED_PERSON]"
+
                     parts = []
-                    for k, v in row.items():
+                    for k, v in row_clean.items():
                         if v is None:
                             continue
                         val = " ".join(v) if isinstance(v, list) else str(v)
+                        # Redact any occurrences of employee names in-memory
+                        for emp_name in org_chart_names:
+                            if len(emp_name) > 3 and emp_name in val:
+                                val = val.replace(emp_name, "[REDACTED_PERSON]")
                         if val.strip():
                             parts.append(f"{k}: {val}")
                     text = " | ".join(parts)
@@ -112,7 +138,7 @@ def load_csv_files(data_dir):
                             meta["ticket_id"] = row["ticket_id"].strip().strip('"')
 
                     docs.append(Document(
-                        page_content=redact(text, is_huge_csv=is_huge_csv),
+                        page_content=text,
                         metadata=meta
                     ))
     return docs

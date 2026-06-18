@@ -51,7 +51,8 @@ def run_eval():
                 relevant_count += 1
 
         p5 = relevant_count / 5 if docs else 0
-        r5 = min(relevant_count / max(1, 1), 1.0)  # Assume 1 relevant doc
+        total_relevant = 3 if qtype in ("ticket", "summary") else 1
+        r5 = min(relevant_count / total_relevant, 1.0)
         hit = "✅" if source_hit else "❌"
 
         total_p5 += p5

@@ -266,8 +266,8 @@ class HybridMCPRetriever:
                     ],
                     "filter": [
                         {
-                            "term": {
-                                "metadata.source": "nexacorp_tickets.csv"
+                            "terms": {
+                                "metadata.source": ["nexacorp_tickets.csv", "customer_support_tickets_200k.csv", "customer_support_tickets_200k.csv.bak"]
                             }
                         }
                     ]
