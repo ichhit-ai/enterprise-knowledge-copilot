@@ -8,7 +8,7 @@ for key in ["ES_URL", "ES_API_KEY", "GROQ_API_KEY"]:
     if not os.environ.get(key):
         try:
             import tomllib
-            secrets_path = os.path.join(os.path.dirname(__file__), "..", ".streamlit", "secrets.toml")
+            secrets_path = os.path.join(os.path.dirname(__file__), "..", "..", ".streamlit", "secrets.toml")
             if os.path.exists(secrets_path):
                 with open(secrets_path, "rb") as f:
                     secrets = tomllib.load(f)
@@ -26,11 +26,11 @@ executor = concurrent.futures.ThreadPoolExecutor(max_workers=500)
 asyncio.get_event_loop().set_default_executor(executor)
 
 # Add parent directory to sys.path so we can import src.agent
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 try:
     from src.agent import build_agent
-    index_full_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".index_full"))
+    index_full_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".index_full"))
     index_dir = index_full_path if os.path.exists(index_full_path) else None
     agent, retriever = build_agent(index_dir=index_dir)
 except Exception as e:

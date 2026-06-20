@@ -1,7 +1,7 @@
 import os
 import sys
 # Resolve root path for imports in cloud environments
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import streamlit as st
 import getpass
@@ -24,6 +24,8 @@ import asyncio
 from datetime import datetime
 from src.agent import build_agent
 
+INDEX_DIR = os.path.join(os.path.dirname(__file__), "..", "..", ".index_full")
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 
 st.set_page_config(page_title="NexaCorp Copilot", page_icon="🛡️", layout="wide")
 
@@ -97,7 +99,7 @@ with st.sidebar:
         if st.button(btn_label, use_container_width=True):
             with st.spinner("Indexing documents..."):
                 try:
-                    from scripts.ingest_elasticsearch import ingest_to_elasticsearch
+                    from src.ingestion.ingest_elasticsearch import ingest_to_elasticsearch
                     ingest_to_elasticsearch()
                     st.success("Successfully indexed documents!")
                 except Exception as e:
@@ -117,8 +119,6 @@ with st.sidebar:
 
     # System health dashboard
     st.markdown("### 📊 System Health")
-    INDEX_DIR = os.path.join(os.path.dirname(__file__), "..", ".index")
-    DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
     @st.cache_data
     def load_system_health(index_dir, data_dir):
@@ -138,7 +138,9 @@ with st.sidebar:
 
         try:
             import csv
-            ticket_path = os.path.join(data_dir, "nexacorp_tickets.csv")
+            ticket_path = os.path.join(data_dir, "customer_support_tickets_200k.csv")
+            if not os.path.exists(ticket_path):
+                ticket_path = os.path.join(data_dir, "customer_support_tickets_200k.csv.bak")
             with open(ticket_path) as f:
                 ticket_count = sum(1 for _ in csv.DictReader(f))
         except Exception:
@@ -167,7 +169,7 @@ with st.sidebar:
         st.session_state.onboarding_mode = True
 
     # Feedback stats
-    feedback_path = os.path.join(os.path.dirname(__file__), "..", "feedback.jsonl")
+    feedback_path = os.path.join(os.path.dirname(__file__), "..", "..", "logs", "feedback.jsonl")
     if os.path.exists(feedback_path):
         try:
             with open(feedback_path) as f:
@@ -185,7 +187,7 @@ st.divider()
 
 @st.cache_resource
 def get_agent():
-    return build_agent()
+    return build_agent(index_dir=INDEX_DIR)
 
 agent, retriever = get_agent()
 
@@ -216,7 +218,9 @@ if st.session_state.get("onboarding_mode"):
                     try:
                         result = asyncio.run(agent.ainvoke({"question": q, "role": role, "mode": mode_key}))
                     except Exception as e:
-                        st.warning("⚠️ Remote Elasticsearch connection failed. Falling back to Local Edge Sandbox.")
+                        import traceback
+                        traceback.print_exc()
+                        st.warning(f"⚠️ Remote Elasticsearch connection failed ({e}). Falling back to Local Edge Sandbox.")
                         result = asyncio.run(agent.ainvoke({"question": q, "role": role, "mode": "local"}))
 
                 st.markdown(result.get("answer", "No answer available."))
@@ -256,7 +260,7 @@ for idx, msg in enumerate(st.session_state.messages):
 
 
 def _log_feedback(msg, rating, idx):
-    feedback_path = os.path.join(os.path.dirname(__file__), "..", "feedback.jsonl")
+    feedback_path = os.path.join(os.path.dirname(__file__), "..", "..", "logs", "feedback.jsonl")
     entry = {
         "timestamp": datetime.now().isoformat(),
         "question": st.session_state.messages[idx - 1]["content"] if idx > 0 else "",
@@ -323,7 +327,9 @@ if prompt:
             try:
                 result = asyncio.run(agent.ainvoke({"question": prompt, "history": history, "role": role, "mode": mode_key}))
             except Exception as e:
-                st.warning("⚠️ Remote Elasticsearch connection failed. Falling back to Local Edge Sandbox.")
+                import traceback
+                traceback.print_exc()
+                st.warning(f"⚠️ Remote Elasticsearch connection failed ({e}). Falling back to Local Edge Sandbox.")
                 result = asyncio.run(agent.ainvoke({"question": prompt, "history": history, "role": role, "mode": "local"}))
             elapsed = time.time() - t0
 

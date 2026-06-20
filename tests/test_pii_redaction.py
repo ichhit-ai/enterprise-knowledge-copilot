@@ -1,4 +1,4 @@
-from src.ingest import redact
+from src.ingestion.ingest import redact
 
 def test_email_redacted():
     assert "[REDACTED_EMAIL]" in redact("Contact john@example.com")

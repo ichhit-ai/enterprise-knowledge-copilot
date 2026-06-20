@@ -18,8 +18,8 @@ except OSError:
     spacy.cli.download("en_core_web_sm")
     nlp = spacy.load("en_core_web_sm")
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-INDEX_DIR = os.path.join(os.path.dirname(__file__), "..", ".index_full")
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data")
+INDEX_DIR = os.path.join(os.path.dirname(__file__), "..", "..", ".index")
 
 EMAIL_RE = re.compile(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
 PHONE_RE = re.compile(r'\+?\d[\d\s\-()]{7,}\d')
@@ -30,12 +30,9 @@ SYSTEMS = ["AUTH-GATEWAY", "NEXACORE-DB", "NEXAVPN", "CLOUDSYNC-S3", "NEXAMAIL",
            "APIGATEWAY-V2", "TICKETSYS"]
 
 
-def redact(text, is_huge_csv=False):
+def redact(text):
     text = EMAIL_RE.sub("[REDACTED_EMAIL]", text)
     text = PHONE_RE.sub("[REDACTED_PHONE]", text)
-    if is_huge_csv:
-        # Fast path: bypass expensive SpaCy NER for the 200k rows to speed up ingestion by 1000x
-        return text
     doc = nlp(text)
     persons = sorted(set(e.text for e in doc.ents if e.label_ == "PERSON"), key=len, reverse=True)
     for p in persons:
@@ -85,62 +82,56 @@ def load_csv_files(data_dir):
                 if name_pat.match(tgt):
                     org_chart_names.add(tgt)
 
-    for path in glob.glob(os.path.join(data_dir, "*.csv*")):
+    for path in glob.glob(os.path.join(data_dir, "*.csv")):
         name = os.path.basename(path)
-        # Skip the lightweight nexacorp_tickets.csv and backups
-        if "original" in name or "nexacorp_tickets" in name:
+        if "original" in name or "org_chart" in name:  # Skip backups and org chart itself
             continue
-        
-        # Only process org chart and 200k ticket dataset
-        if "nexacorp_org_chart" in name or "customer_support_tickets_200k" in name:
-            print(f"Loading CSV file: {name}...")
-            is_huge_csv = "customer_support_tickets_200k" in name
-            with open(path) as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    # Redact columns directly in-memory
-                    row_clean = dict(row)
-                    if "employee_name" in row_clean:
-                        row_clean["employee_name"] = "[REDACTED_PERSON]"
-                    if "customer_name" in row_clean:
-                        row_clean["customer_name"] = "[REDACTED_PERSON]"
+        with open(path) as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                # Redact columns directly in-memory
+                row_clean = dict(row)
+                if "employee_name" in row_clean:
+                    row_clean["employee_name"] = "[REDACTED_PERSON]"
+                if "customer_name" in row_clean:
+                    row_clean["customer_name"] = "[REDACTED_PERSON]"
 
-                    parts = []
-                    for k, v in row_clean.items():
-                        if v is None:
-                            continue
-                        val = " ".join(v) if isinstance(v, list) else str(v)
-                        # Redact any occurrences of employee names in-memory
-                        for emp_name in org_chart_names:
-                            if len(emp_name) > 3 and emp_name in val:
-                                val = val.replace(emp_name, "[REDACTED_PERSON]")
-                        if val.strip():
-                            parts.append(f"{k}: {val}")
-                    text = " | ".join(parts)
+                parts = []
+                for k, v in row_clean.items():
+                    if v is None:
+                        continue
+                    val = " ".join(v) if isinstance(v, list) else str(v)
+                    # Redact any occurrences of employee names in-memory
+                    for emp_name in org_chart_names:
+                        if len(emp_name) > 3 and emp_name in val:
+                            val = val.replace(emp_name, "[REDACTED_PERSON]")
+                    if val.strip():
+                        parts.append(f"{k}: {val}")
+                text = " | ".join(parts)
 
-                    # Build rich metadata
-                    meta = {"source": name, "type": "structured"}
-                    systems = detect_systems(text)
-                    if systems:
-                        meta["system"] = systems[0]
+                # Build rich metadata
+                meta = {"source": name, "type": "structured"}
+                systems = detect_systems(text)
+                if systems:
+                    meta["system"] = systems[0]
 
-                    # Extract ticket-specific metadata
-                    if "ticket" in name.lower():
-                        if row.get("priority"):
-                            meta["priority"] = row["priority"].strip().strip('"')
-                        if row.get("created_at"):
-                            meta["created_at"] = row["created_at"].strip().strip('"')
-                        if row.get("status"):
-                            meta["status"] = row["status"].strip().strip('"')
-                        if row.get("exact_error_code"):
-                            meta["error_code"] = row["exact_error_code"].strip().strip('"')
-                        if row.get("ticket_id"):
-                            meta["ticket_id"] = row["ticket_id"].strip().strip('"')
+                # Extract ticket-specific metadata
+                if "ticket" in name.lower():
+                    if row.get("priority"):
+                        meta["priority"] = row["priority"].strip().strip('"')
+                    if row.get("created_at"):
+                        meta["created_at"] = row["created_at"].strip().strip('"')
+                    if row.get("status"):
+                        meta["status"] = row["status"].strip().strip('"')
+                    if row.get("exact_error_code"):
+                        meta["error_code"] = row["exact_error_code"].strip().strip('"')
+                    if row.get("ticket_id"):
+                        meta["ticket_id"] = row["ticket_id"].strip().strip('"')
 
-                    docs.append(Document(
-                        page_content=text,
-                        metadata=meta
-                    ))
+                docs.append(Document(
+                    page_content=text,
+                    metadata=meta
+                ))
     return docs
 
 
@@ -208,15 +199,9 @@ def build_index():
     if os.path.exists(chroma_path):
         import shutil
         shutil.rmtree(chroma_path)
-    
-    # ── HYBRID SCALE OPTIMIZATION ──
-    # We index the first 5,000 documents in ChromaDB vector index.
-    # This keeps vector lookup extremely fast on the laptop and prevents GPU/RAM OOM.
-    Chroma.from_documents(docs[:5000], embeddings, persist_directory=chroma_path)
+    Chroma.from_documents(docs, embeddings, persist_directory=chroma_path)
 
     print("building bm25 index...")
-    # Index all 200,000+ documents in BM25 keyword index (fast string tokenization)
-    # This ensures that ALL 200,000 tickets are searchable and mapped in your local ticket_map!
     corpus = [d.page_content.lower().split() for d in docs]
     bm25 = BM25Okapi(corpus)
     with open(os.path.join(INDEX_DIR, "bm25.pkl"), "wb") as f:
@@ -228,7 +213,7 @@ def build_index():
         pickle.dump(G, f)
 
     # Count ticket-specific stats
-    ticket_count = sum(1 for d in docs if "tickets" in d.metadata.get("source", "").lower() or "200k" in d.metadata.get("source", "").lower())
+    ticket_count = sum(1 for d in docs if d.metadata.get("source", "").endswith("tickets.csv"))
 
     print(f"done. {len(docs)} docs indexed, {G.number_of_nodes()} graph nodes, "
           f"{G.number_of_edges()} edges, {ticket_count} ticket records")

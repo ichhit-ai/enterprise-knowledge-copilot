@@ -5,8 +5,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from src.ingest_full import load_text_files, load_csv_files, load_pdf_files, DATA_DIR
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+from src.ingestion.ingest_full import load_text_files, load_csv_files, load_pdf_files, DATA_DIR
 
 INDEX_NAME = "nexacorp_docs"
 
@@ -74,7 +74,7 @@ def ingest_to_elasticsearch_full():
     if not os.environ.get("ES_URL"):
         try:
             import tomllib
-            secrets_path = os.path.join(os.path.dirname(__file__), "..", ".streamlit", "secrets.toml")
+            secrets_path = os.path.join(os.path.dirname(__file__), "..", "..", ".streamlit", "secrets.toml")
             if os.path.exists(secrets_path):
                 with open(secrets_path, "rb") as f:
                     secrets = tomllib.load(f)

@@ -48,4 +48,4 @@ ROLE_ACCESS = {
 }
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-AUDIT_PATH = os.path.join(os.path.dirname(__file__), "..", "audit.jsonl")
+AUDIT_PATH = os.path.join(os.path.dirname(__file__), "..", "logs", "audit.jsonl")

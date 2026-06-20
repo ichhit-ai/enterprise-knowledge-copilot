@@ -3,12 +3,17 @@ __pycache__/
 *.pyc
 
 # Local Databases
-chroma.sqlite3
 .index_full/
 
 # Logs
-audit.jsonl
-feedback.jsonl
+logs/
+
+# Benchmarks
+benchmarks/results/
+
+# Presentation Outputs & Assets
+presentation/output/
+presentation/assets/
 
 # Environment
 .env
@@ -20,10 +25,6 @@ mcp-server/node_modules/
 # Large Datasets
 data/customer_support_tickets_200k.csv
 data/customer_support_tickets_200k.csv.bak
-
-# Hackathon PPT
-IdeaRound_Enterprise_Knowledge_Copilot.pptx
-scripts/build_ppt.py
 
 # Streamlit secrets
 .streamlit/secrets.toml
