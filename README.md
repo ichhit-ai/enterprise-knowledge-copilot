@@ -120,16 +120,41 @@ podman run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=
 
 ### Step 3: Run Data Ingestion
 
-#### A. Ingest to Local Edge Sandbox (200,000 Tickets)
-```bash
-PYTHONPATH=. python src/ingestion/ingest_full.py
-```
+> [!IMPORTANT]
+> **YOU MUST RUN DATA INGESTION FIRST** before launching the applications. The raw search indexes are excluded from the repository to keep it lightweight. Ingesting parses the datasets, applies PII redaction, and builds the local databases.
 
-#### B. Ingest to Local Elasticsearch Container (200,000 Tickets)
-Ensure `ES_URL = "http://localhost:9200"` is in `.streamlit/secrets.toml`.
-```bash
-PYTHONPATH=. python src/ingestion/ingest_elasticsearch_full.py
-```
+#### 📊 Dataset Tiers & Preparation
+We provide two dataset scales inside the `data/` directory:
+1. **Lightweight Sandbox (2,000 Tickets)**: Located at `data/nexacorp_tickets.csv` (contains ticket IDs `TKT-1` to `TKT-2000`). Ready to ingest immediately.
+2. **Heavyweight Dataset (100,000 Tickets)**: Located at `data/customer_support_tickets_200k.csv.bak` (optimized down from 200k to 100k rows to save disk space).
+   * **To use this dataset**, you **must rename it** first:
+     ```bash
+     mv data/customer_support_tickets_200k.csv.bak data/customer_support_tickets_200k.csv
+     ```
+
+Run one of the ingestion configurations below:
+
+#### A. Ingesting the Lightweight Sandbox (2,000 Tickets)
+* **Build the Local Edge Sandbox Index (Chroma + BM25)**:
+  ```bash
+  PYTHONPATH=. python src/ingestion/ingest.py
+  ```
+* **Build the Elasticsearch Index**:
+  Ensure local Elasticsearch is running and run:
+  ```bash
+  PYTHONPATH=. python src/ingestion/ingest_elasticsearch.py
+  ```
+
+#### B. Ingesting the Heavyweight Dataset (100,000 Tickets)
+* **Build the Local Edge Sandbox Index (Chroma + BM25)**:
+  ```bash
+  PYTHONPATH=. python src/ingestion/ingest_full.py
+  ```
+* **Build the Elasticsearch Index**:
+  Ensure local Elasticsearch is running and run:
+  ```bash
+  PYTHONPATH=. python src/ingestion/ingest_elasticsearch_full.py
+  ```
 
 ---
 

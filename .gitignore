@@ -28,3 +28,6 @@ data/customer_support_tickets_200k.csv.bak
 
 # Streamlit secrets
 .streamlit/secrets.toml
+
+# Project Links
+links
