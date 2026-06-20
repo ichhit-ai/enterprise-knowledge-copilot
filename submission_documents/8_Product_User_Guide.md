@@ -39,15 +39,19 @@ You now have the entire project on your machine.
 
 ---
 
-### 1.3 — Install Python Libraries
+### 1.3 — Install Python & Node.js Libraries
 
-Run these two commands inside the project folder:
+Run these commands inside the project folder to install Python and Node.js dependencies:
 
 ```bash
+# Install Python dependencies
 pip install -r requirements.txt
+
+# Install Node.js dependencies for the MCP server
+cd mcp-server && npm install && cd ..
 ```
 
-This installs everything the app needs: the AI frameworks, the search engines, the web interface, and the privacy tools.
+This installs everything the app needs: the AI frameworks, the search engines, the MCP gateway, the web interface, and the privacy tools.
 
 ---
 

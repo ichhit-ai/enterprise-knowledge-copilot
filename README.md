@@ -98,6 +98,9 @@ pip install -r requirements.txt
 
 # Download the spaCy NLP model (CRITICAL for PII redaction)
 python -m spacy download en_core_web_sm
+
+# Install Node.js dependencies for the MCP server (Required for Elasticsearch mode)
+cd mcp-server && npm install && cd ..
 ```
 
 ---
