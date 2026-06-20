@@ -93,13 +93,13 @@ This is the step where the app reads your 200,000 support tickets, strips out pr
 
 **Build the local ChromaDB + BM25 index:**
 ```bash
-PYTHONPATH=. python src/ingest_full.py
+PYTHONPATH=. python src/ingestion/ingest_full.py
 ```
 *Takes about 3–5 minutes. Creates the `.index/` and `.index_full/` folders.*
 
 **Build the Elasticsearch index:**
 ```bash
-PYTHONPATH=. python scripts/ingest_elasticsearch.py
+PYTHONPATH=. python src/ingestion/ingest_elasticsearch_full.py
 ```
 *Uploads all 200,000 tickets into your local Elasticsearch container.*
 
@@ -127,7 +127,7 @@ You have **two ways** to use the copilot. Both connect to the same data and the 
 
 **Start it:**
 ```bash
-streamlit run src/app_full.py
+streamlit run src/frontend/app_full.py
 ```
 
 **Open it:** Go to `http://localhost:8501` in your browser.
@@ -156,7 +156,7 @@ The screen is split into two sections:
 
 **Start it:**
 ```bash
-uvicorn fastapi_sandbox.main:app --host 0.0.0.0 --port 8000
+PYTHONPATH=. uvicorn src.frontend.main:app --host 0.0.0.0 --port 8000
 ```
 
 **Open it:** Go to `http://localhost:8000` in your browser.
@@ -245,7 +245,7 @@ This is useful for debugging and for demonstrating the AI's decision-making to s
 ### To restart later:
 1. Start Elasticsearch: `podman start elasticsearch`
 2. Start Ollama: `ollama serve`
-3. Start the app: `streamlit run src/app_full.py` or `uvicorn fastapi_sandbox.main:app --port 8000`
+3. Start the app: `streamlit run src/frontend/app_full.py` or `PYTHONPATH=. uvicorn src.frontend.main:app --port 8000`
 
 You do **not** need to re-run the ingestion scripts. The data is already saved on disk.
 

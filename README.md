@@ -122,13 +122,13 @@ podman run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=
 
 #### A. Ingest to Local Edge Sandbox (200,000 Tickets)
 ```bash
-PYTHONPATH=. python src/ingest_full.py
+PYTHONPATH=. python src/ingestion/ingest_full.py
 ```
 
 #### B. Ingest to Local Elasticsearch Container (200,000 Tickets)
 Ensure `ES_URL = "http://localhost:9200"` is in `.streamlit/secrets.toml`.
 ```bash
-PYTHONPATH=. python scripts/ingest_elasticsearch.py
+PYTHONPATH=. python src/ingestion/ingest_elasticsearch_full.py
 ```
 
 ---
@@ -137,13 +137,13 @@ PYTHONPATH=. python scripts/ingest_elasticsearch.py
 
 #### Option A: Launch the Streamlit Frontend Dashboard
 ```bash
-streamlit run src/app_full.py
+streamlit run src/frontend/app_full.py
 ```
 *Access it in your browser at `http://localhost:8501`.*
 
 #### Option B: Launch the High-Performance FastAPI Backend
 ```bash
-uvicorn fastapi_sandbox.main:app --host 0.0.0.0 --port 8000
+PYTHONPATH=. uvicorn src.frontend.main:app --host 0.0.0.0 --port 8000
 ```
 *Access the interactive API specs at `http://localhost:8000/docs`.*
 
