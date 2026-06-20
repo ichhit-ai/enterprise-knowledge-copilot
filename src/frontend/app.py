@@ -81,6 +81,11 @@ with st.sidebar:
     )
     mode_key = "elasticsearch" if "Elasticsearch" in retrieval_mode else "local"
 
+    if mode_key == "local":
+        st.caption("⚡ **Chroma DB + BM25 Local Index** active. Reading local database.")
+    else:
+        st.caption("☁️ **Elasticsearch Cloud + MCP** active. Connected to enterprise cluster.")
+
     if mode_key == "elasticsearch":
         es_url = os.environ.get("ES_URL", "")
         is_local_es = not es_url or "localhost" in es_url or "127.0.0.1" in es_url
@@ -282,14 +287,44 @@ def score_class(val, good=0.5, bad=0.2):
 
 # ── Query Suggestions (when chat is empty) ──
 if not st.session_state.messages:
+    # Sleek project info block explaining hybrid retrieval and sandbox tickets
+    st.markdown(
+        """
+        <div style="background: rgba(108,99,255,0.06); border: 1px solid rgba(108,99,255,0.2); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+            <h4 style="color: #c5c0ff; margin-top: 0; margin-bottom: 8px;">🛡️ Welcome to NexaCorp Copilot</h4>
+            <p style="font-size: 0.92rem; color: #d0d0ff; line-height: 1.5; margin-bottom: 16px;">
+                This system operates as a hybrid retrieval platform designed to search company regulations, runbooks, and client support tickets. It intelligently routes queries between local sandbox resources and cloud-scale enterprise indices.
+            </p>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 250px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px;">
+                    <strong style="color: #6deca9; font-size: 0.88rem;">⚡ Edge Sandbox (Local)</strong>
+                    <p style="font-size: 0.8rem; color: #aaa; margin: 4px 0 0 0;">
+                        Uses <b>ChromaDB Vector Store</b>, <b>BM25</b>, and a <b>Knowledge Graph</b>. Operating on policy documents and sandbox tickets (<b>TKT-1</b> through <b>TKT-2000</b>).
+                    </p>
+                </div>
+                <div style="flex: 1; min-width: 250px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px;">
+                    <strong style="color: #f1d96c; font-size: 0.88rem;">☁️ Enterprise Cluster (Elasticsearch)</strong>
+                    <p style="font-size: 0.8rem; color: #aaa; margin: 4px 0 0 0;">
+                        Connected via <b>Model Context Protocol (MCP)</b> to a remote <b>Elastic Cloud instance</b>. Suitable for high-scale document and log retrieval.
+                    </p>
+                </div>
+            </div>
+            <p style="font-size: 0.82rem; color: #8888bb; margin-top: 14px; margin-bottom: 0;">
+                💡 <b>Ticket Search Access:</b> Direct queries on tickets (e.g. <i>"What is ticket 1789?"</i>) require <b>Manager</b> or <b>IT Admin</b> roles (changeable in the sidebar settings).
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     st.markdown("### 💡 Try asking:")
     suggestions = [
-        "What is error code ERR-AUTH-9092?",
+        "What is ticket 1789?",
         "How do I request time off?",
+        "What is ticket TKT-1500?",
         "Who manages AUTH-GATEWAY?",
-        "Show me tickets related to VPN issues",
-        "Summarize the data classification policy",
-        "How do I fix VPN-CERT-7731?",
+        "Summarize ticket 45",
+        "What is error code ERR-AUTH-9092?",
     ]
     cols = st.columns(3)
     for i, s in enumerate(suggestions):
